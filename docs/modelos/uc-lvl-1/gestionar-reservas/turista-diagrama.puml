@@ -18,13 +18,8 @@ T -- UC2
 T -- UC3
 T -- UC4
 T -- UC5
-T -- UC6
-T -- UC7
 
 UC1 ..> UC6 : <<include>>
-
 UC1 <.. UC7 : <<extend>>
-
-UC5 ..> UC4 : <<include>>
 
 @enduml
