@@ -4,17 +4,19 @@
 
 Los modelos han sido divididos por actor para una mejor legibilidad.
 
-## Gestionar Usuarios
-
-* ### [Guía Turístico](gestionar-usuarios/guia-turistico-diagrama.puml)
-* ### [Admin](gestionar-usuarios/admin-diagrama.puml)
-* ### [Turista](gestionar-usuarios/turista-diagrama.puml)
+## [Administrar Anomalías](administrar-anomalias/diagrama.puml)
 
 ---
 
 ## [Gestionar Destino Turístico](gestionar-destino/diagrama.puml)
 
 ---
+
+## Gestionar Usuarios
+
+* ### [Guía Turístico](gestionar-usuarios/guia-turistico-diagrama.puml)
+* ### [Admin](gestionar-usuarios/admin-diagrama.puml)
+* ### [Turista](gestionar-usuarios/turista-diagrama.puml)
 
 ## Gestionar Servicios
 
@@ -67,13 +69,6 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 * ### [Prestadoras de Servicios](visualizar-indicadores-y-reportes/prestadora-diagrama.puml)
 * ### [Gestoras de Destinos Turísticos](visualizar-indicadores-y-reportes/gestoras-diagrama.puml)
 * ### [Admin](visualizar-indicadores-y-reportes/admin-diagrama.puml)
-
----
-
-## Administrar Anomalías
-
-* ### [Admin](administrar-anomalias/admin-diagrama.puml)
----
 
 ## Gestionar Reportes de Seguridad
 
