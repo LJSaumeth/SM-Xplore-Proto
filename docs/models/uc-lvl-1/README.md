@@ -22,6 +22,9 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 ## [Visualizar indicadores y reportes](visualizar-indicadores-y-reportes/diagram.puml)
 
 ---
+## [Gestionar Reseñas](gestionar-reseñas/diagram.puml)
+
+---
 ## Gestionar Usuarios
 
 * ### [Guía Turístico](gestionar-usuarios/guia-turistico-diagrama.puml)
@@ -41,14 +44,6 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 * ### [Turista](gestionar-reservas/turista-diagrama.puml)
 * ### [Prestadoras de Servicios](gestionar-reservas/prestadora-diagrama.puml)
 * ### [Guía Turístico](gestionar-reservas/guia-turistico-diagrama.puml)
-
----
-## Gestionar Reseñas
-
-* ### [Prestadoras de Servicios](gestionar-reseñas/prestadora-diagrama.puml)
-* ### [Guía Turístico](gestionar-reseñas/guia-turistico-diagrama.puml)
-* ### [Gestoras de Destinos Turísticos](gestionar-reseñas/gestoras-diagrama.puml)
-* ### [Turista](gestionar-reseñas/turista-diagrama.puml)
 
 ---
 ## Gestionar Reportes de Seguridad
