@@ -1,0 +1,54 @@
+@startuml
+
+note "Review se relaciona con\nActividad, Evento, Guia,\nPrestadoraServicios/Servicio,\nSitio, pero poner eso\naqui revienta el modelo" as n
+
+abstract class Usuario
+class Turista
+class Guia
+class PrestadoraServicios
+class GestoraDestinos
+class Admin
+
+class Zona
+class Sitio
+class Evento
+class Actividad
+class Servicio
+class Reserva
+class Review
+class Anomalía
+class ReporteSeguridad
+
+Guia -right-|> Usuario
+Admin -up-|> Usuario
+Turista -up-|> Usuario
+GestoraDestinos --|> Usuario
+PrestadoraServicios -up-|> Usuario
+
+Usuario "1"*-up-"*" ReporteSeguridad : "postea"
+Usuario "1"o-right-"0..*" Anomalía : "reporta"
+
+Anomalía "0..*"--o"1" Admin : "administra"
+
+Turista "1"*-left-"*" Review : "       realiza       "
+Turista "1"*--"*" Reserva : "solicita"
+
+PrestadoraServicios "1"*--"*" Servicio : "ofrece"
+
+GestoraDestinos "1"-left-"*" Zona : "  configura   "
+
+Actividad "*"-right-o"1" Guia : "dirige"
+
+Sitio "1"-down-"0..*  " Actividad : "  alberga   "
+
+Zona "1"-left-"*" Sitio : "  pertenece   "
+
+Sitio "1"o-left-"*" Evento : "  alberga   "
+
+Reserva "*"-right-*"0..1" Servicio : " incluye"
+Reserva "*"--*"0..1" Evento : "incluye"
+Actividad "0..1 "*--"*" Reserva : "incluye"
+
+
+
+@enduml
