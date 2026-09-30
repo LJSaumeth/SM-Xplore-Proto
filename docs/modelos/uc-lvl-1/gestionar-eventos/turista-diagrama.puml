@@ -13,7 +13,6 @@ package "Gestionar Eventos Turísticos" {
 T -- UC1
 T -- UC2
 T -- UC3
-T -- UC4
 
 UC1 <.. UC4 : <<extend>>
 UC2 <.. UC4 : <<extend>>
