@@ -11,7 +11,6 @@ package "Gestionar Servicios" {
 
 T -- UC1
 T -- UC2
-T -- UC3
 
 UC1 <.. UC3 : <<extend>>
 UC2 <.. UC3 : <<extend>>
