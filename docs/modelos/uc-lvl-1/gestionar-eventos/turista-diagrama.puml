@@ -15,8 +15,9 @@ T -- UC2
 T -- UC3
 T -- UC4
 
-UC1 ..> UC4 : <<include>>
-UC2 ..> UC4 : <<include>>
-UC3 ..> UC4 : <<include>>
+' Ver detalles es una extensión opcional de las búsquedas/consultas
+UC1 <.. UC4 : <<extend>>
+UC2 <.. UC4 : <<extend>>
+UC3 <.. UC4 : <<extend>>
 
 @enduml
