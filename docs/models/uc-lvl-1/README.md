@@ -13,6 +13,9 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 ## [Gestionar Servicios](gestionar-servicios/diagram.puml)
 
 ---
+## [Gestionar Actividades Turísticas](gestionar-actividades/diagram.puml)
+
+---
 ## Gestionar Usuarios
 
 * ### [Guía Turístico](gestionar-usuarios/guia-turistico-diagrama.puml)
@@ -25,12 +28,6 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 * ### [Gestoras de Destinos Turísticos](gestionar-atractivos/gestoras-diagrama.puml)
 * ### [Guía Turístico](gestionar-atractivos/guia-turistico-diagrama.puml)
 * ### [Turista](gestionar-atractivos/turista-diagrama.puml)
-
----
-## Gestionar Actividades Turísticas
-
-* ### [Guía Turístico](gestionar-actividades/guia-turistico-diagrama.puml)
-* ### [Turista](gestionar-actividades/turista-diagrama.puml)
 
 ---
 ## Gestionar Eventos Turísticos
