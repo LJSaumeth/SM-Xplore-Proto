@@ -11,9 +11,6 @@ package "UC5 - Gestionar Actividades" {
 }
 
 T -- UC1
-T -- UC2
-T -- UC3
-T -- UC4
 
 UC1 <.. UC2 : <<extend>>
 UC1 <.. UC3 : <<extend>>
