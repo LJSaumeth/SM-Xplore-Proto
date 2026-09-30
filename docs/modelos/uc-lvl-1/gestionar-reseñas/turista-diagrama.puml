@@ -4,7 +4,6 @@ left to right direction
 actor Turista as T
 
 package "Gestionar Reseñas" {
-    usecase "Crear reseña y puntuación" as UC1
     usecase "Leer reseñas y puntuaciones" as UC2
     usecase "Reseñar atractivo turístico" as UC3
     usecase "Reseñar actividad" as UC4
@@ -13,18 +12,11 @@ package "Gestionar Reseñas" {
     usecase "Reseñar guía" as UC7
 }
 
-T -- UC1
 T -- UC2
 T -- UC3
 T -- UC4
 T -- UC5
 T -- UC6
 T -- UC7
-
-UC3 --|> UC1
-UC4 --|> UC1
-UC5 --|> UC1
-UC6 --|> UC1
-UC7 --|> UC1
 
 @enduml
