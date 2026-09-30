@@ -13,7 +13,7 @@ T -- UC1
 T -- UC2
 T -- UC3
 
-UC1 ..> UC3 : <<include>>
-UC2 ..> UC3 : <<include>>
+UC1 <.. UC3 : <<extend>>
+UC2 <.. UC3 : <<extend>>
 
 @enduml
