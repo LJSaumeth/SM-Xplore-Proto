@@ -1,7 +1,6 @@
 # Use-Cases Lvl 1 Diagrams
 
 ---
-
 Los modelos han sido divididos por actor para una mejor legibilidad.
 
 ## [Administrar Anomalías](administrar-anomalias/diagrama.puml)
@@ -25,6 +24,9 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 ## [Gestionar Reseñas](gestionar-reseñas/diagram.puml)
 
 ---
+## [Gestionar Reportes de Seguridad](gestionar-reportes-de-seguridad/diagram.puml)
+
+---
 ## Gestionar Usuarios
 
 * ### [Guía Turístico](gestionar-usuarios/guia-turistico-diagrama.puml)
@@ -44,14 +46,3 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 * ### [Turista](gestionar-reservas/turista-diagrama.puml)
 * ### [Prestadoras de Servicios](gestionar-reservas/prestadora-diagrama.puml)
 * ### [Guía Turístico](gestionar-reservas/guia-turistico-diagrama.puml)
-
----
-## Gestionar Reportes de Seguridad
-
-* ### [Gestoras de Destinos Turístico](gestionar-reportes-de-seguridad/gestoras-diagrama.puml)
-* ### [Prestadoras de Servicios](gestionar-reportes-de-seguridad/prestadora-diagrama.puml)
-* ### [Guía Turístico](gestionar-reportes-de-seguridad/guia-turistico-diagrama.puml)
-* ### [Admin](gestionar-reportes-de-seguridad/admin-diagrama.puml)
-* ### [Turista](gestionar-reportes-de-seguridad/turista-diagrama.puml)
-
----
