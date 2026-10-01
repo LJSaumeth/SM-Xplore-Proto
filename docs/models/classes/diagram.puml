@@ -1,6 +1,6 @@
 @startuml
 
-note "Review se relaciona con\nActividad, Evento, Guia,\nPrestadoraServicios/Servicio,\nSitio, pero poner eso\naqui revienta el modelo" as n
+note "Review se relaciona con\nActividad, Evento, Guia,\nServicio,Sitio, pero poner\neso aqui revienta el modelo" as n
 
 abstract class Usuario
 class Turista
@@ -49,6 +49,6 @@ Reserva "*"-right-*"0..1" Servicio : " incluye"
 Reserva "*"--*"0..1" Evento : "incluye"
 Actividad "0..1 "*--"*" Reserva : "incluye"
 
-
+Sitio "*"-right-o"1" GestoraDestinos : "registra"
 
 @enduml
