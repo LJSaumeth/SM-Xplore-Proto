@@ -22,5 +22,6 @@
 Estos diagramas se dividirán en dos (hasta tres modelos), debido al uso de
 persistencia poliglota en el proyecto.
 
-* [Modelo Lógico Relacional]()
-* [Modelo Lógico No Relacional]()
+* [Modelo Lógico PostgreSQL]()
+* [Modelo "Lógico" MongoDB]()
+* [Modelo "Lógico" Neo4j](DB/nosql/neo4j.png)
