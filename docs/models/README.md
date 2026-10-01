@@ -1,5 +1,6 @@
 # Modelos SM-Xplore
 
+---
 ## Casos de uso
 
 * ### [Nivel 0 - Diagrama](uc-lvl-0/diagram.puml)
@@ -14,4 +15,12 @@
 
 ## E-R
 
-* ### [README](E-R/README.md)
+* ### [Diagrama - PNG](E-R/model.png)
+
+## DB
+
+Estos diagramas se dividirán en dos (hasta tres modelos), debido al uso de
+persistencia poliglota en el proyecto.
+
+* [Modelo Lógico Relacional]()
+* [Modelo Lógico No Relacional]()
