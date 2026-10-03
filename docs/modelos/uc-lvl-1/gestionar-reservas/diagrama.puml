@@ -35,9 +35,6 @@ PRE_Actor -- UC_consultar
 PRE_Actor -- UC_estado
 PRE_Actor -- PRE_UC_notificacion
 PRE_Actor -- PRE_UC_alerta
-PRE_Actor -- PRE_UC_cancelacion
-PRE_Actor -- PRE_UC_historial
-PRE_Actor -- PRE_UC_asistencia
 TUR_Actor -- UC_consultar
 TUR_Actor -- UC_cancelar
 TUR_Actor -- TUR_UC_itinerario

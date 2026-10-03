@@ -51,12 +51,6 @@ UC_buscar ..> UC_validar : <<include>>
 GES_UC_estado ..> UC_validar : <<include>>
 GES_UC_registrar <.. GES_UC_capacidad : <<extend>>
 GES_UC_actualizar <.. GES_UC_capacidad : <<extend>>
-UC_buscar <.. UC_mapa : <<extend>>
-UC_consultar <.. UC_mapa : <<extend>>
-GUI_UC_info <.. UC_filtrar : <<extend>>
-UC_filtrar <.. TUR_UC_zona : <<extend>>
-UC_filtrar <.. TUR_UC_categoria : <<extend>>
-TUR_UC_buscar ..> UC_buscar : <<include>>
 TUR_UC_buscar ..> TUR_UC_disponibilidad : <<include>>
 TUR_UC_buscar ..> TUR_UC_congestion : <<include>>
 
