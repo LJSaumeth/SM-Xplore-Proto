@@ -1,7 +1,7 @@
 # Use-Cases Lvl 1 Diagrams
 
 ---
-Los modelos han sido divididos por actor para una mejor legibilidad.
+Los diagramas combinados reúnen los casos de uso compartidos y específicos por actor; se conservan las versiones por actor.
 
 ## [Administrar Anomalías](administrar-anomalias/diagrama.puml)
 
@@ -29,6 +29,7 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 ---
 ## Gestionar Usuarios
 
+* ### [Diagrama combinado](gestionar-usuarios/diagram.puml)
 * ### [Guía Turístico](gestionar-usuarios/guia-turistico-diagrama.puml)
 * ### [Admin](gestionar-usuarios/admin-diagrama.puml)
 * ### [Turista](gestionar-usuarios/turista-diagrama.puml)
@@ -36,6 +37,7 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 ---
 ## Gestionar Atractivos Turísticos
 
+* ### [Diagrama combinado](gestionar-atractivos/diagram.puml)
 * ### [Gestoras de Destinos Turísticos](gestionar-atractivos/gestoras-diagrama.puml)
 * ### [Guía Turístico](gestionar-atractivos/guia-turistico-diagrama.puml)
 * ### [Turista](gestionar-atractivos/turista-diagrama.puml)
@@ -43,6 +45,7 @@ Los modelos han sido divididos por actor para una mejor legibilidad.
 ---
 ## Gestionar Reservas
 
+* ### [Diagrama combinado](gestionar-reservas/diagram.puml)
 * ### [Turista](gestionar-reservas/turista-diagrama.puml)
 * ### [Prestadoras de Servicios](gestionar-reservas/prestadora-diagrama.puml)
 * ### [Guía Turístico](gestionar-reservas/guia-turistico-diagrama.puml)
