@@ -10,9 +10,8 @@ package "Gestionar Reportes de Seguridad" {
 }
 
 T -- UC1
-T -- UC2
 T -- UC3
 
-UC2 ..> UC1 : <<extend>>
+UC1 <.. UC2 : <<extend>>
 
 @enduml
