@@ -1,8 +1,5 @@
 # Wireframes — SM-Xplore
 
-Wireframes de **baja fidelidad** del módulo de **Andrés Rudas**: Gestionar Actividades, Gestionar Eventos y Gestionar Reseñas.
-
-- **Fuente editable (Figma):** https://www.figma.com/design/3FYENRmL7fcaDvGpeT5TEb
 - **Formato:** web responsive 1440×900 · escala de grises · anotaciones `UC# · US#`
 - **Capturas:** PNG exportados desde Figma (1440×900)
 - **Numeración UC:** casos de uso nivel 1 global (ver [`../models/uc-lvl-1/`](../models/uc-lvl-1/))
