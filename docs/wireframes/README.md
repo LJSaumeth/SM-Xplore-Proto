@@ -41,20 +41,6 @@
 
 ---
 
-## Mockups de alta fidelidad (`mockups/`)
-
-Capturas de las páginas Figma `06`, `07` y `08`, construidas a partir de los wireframes y con identidad visual caribeña.
-
-| Carpeta | Página Figma | Pantallas |
-|---|---|---:|
-| [`mockups/gestionar-actividades/`](mockups/gestionar-actividades/) | `06 · Mockups — Gestionar Actividades` | 5 |
-| [`mockups/gestionar-eventos/`](mockups/gestionar-eventos/) | `07 · Mockups — Gestionar Eventos` | 6 |
-| [`mockups/gestionar-resenas/`](mockups/gestionar-resenas/) | `08 · Mockups — Gestionar Reseñas` | 5 |
-
-Los archivos conservan la convención `<actor>_<UC>-<pantalla>.png`.
-
----
-
 ## Pendiente
 
 - `00 · Portada e Índice` (matriz de trazabilidad)
