@@ -25,3 +25,14 @@ persistencia poliglota en el proyecto.
 * ### [Modelo Lógico PostgreSQL](DB/sql/postgre.jpg)
 * ### [Modelo "Lógico" MongoDB](DB/nosql/mongoDB.png)
 * ### [Modelo "Lógico" Neo4j](DB/nosql/neo4j.png)
+
+## Paquetes
+
+* ### [Diagrama](packages/diagram.puml)
+
+## Despliegue
+
+* ### [Módulo 1](deployment/module_1.puml)
+* ### [Módulo 2](deployment/module_2.puml)
+* ### [Módulo 3](deployment/module_3.puml)
+* ### [Módulo 4](deployment/module_4.puml)
