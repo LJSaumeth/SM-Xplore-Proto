@@ -1,0 +1,47 @@
+@startuml
+
+node "Cliente Web"{
+    artifact "Navegador" as navegador
+}
+
+node "Microservicio: Sitios, Servicios, Reservas y Reseñas" {
+    package "infrastructure/adapters" {
+        package "in/controllers"{
+        }
+        package "out/persistence"{
+        }
+    }
+    package application{
+    }
+    package domain{
+        package model{
+        }
+        package ports{
+            package repository{
+            }
+            package "use cases"{
+            }
+        }
+    }
+
+    "in/controllers" --> "use cases"
+    "out/persistence" ..> repository
+    application ..> "use cases"
+}
+
+node "Database Reservas"{
+    database "reservas" as DB_SQL
+}
+node "Database Reseñas, Sitios y Servicios" {
+    database "reseñas_sitios_servicios" as DB_Mongo
+}
+node "Database Preferencias Turista" {
+    database "preferencias_sitios_servicios" as DB_Neo
+}
+"out/persistence" ---> DB_SQL
+"out/persistence" ----> DB_Mongo
+"out/persistence" ---> DB_Neo
+
+navegador --> "in/controllers"
+
+@enduml
