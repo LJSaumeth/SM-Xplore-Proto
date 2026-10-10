@@ -8,7 +8,7 @@ import lombok.Getter;
 
 import java.util.UUID;
 
-@Builder
+@Builder(toBuilder = true)
 @Getter
 public class Comment {
     private Long id;

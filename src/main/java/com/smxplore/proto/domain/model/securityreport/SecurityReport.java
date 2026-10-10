@@ -39,10 +39,9 @@ public class SecurityReport {
         this.text = text;
     }
 
-    public boolean addPhotos(Collection<String> photos) {
-        if (photos == null) return false;
+    public void addPhotos(Collection<String> photos) {
+        if (photos == null) return;
         photos.forEach(this::addPhoto);
-        return true;
     }
 
     public void addPhoto(String photoUrl) {

@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
-@Builder
+@Builder(toBuilder = true)
 @Getter
 public class Service {
     private final UUID id;

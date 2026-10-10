@@ -6,5 +6,5 @@ import com.smxplore.proto.domain.model.service.ServiceType;
 import reactor.core.publisher.Flux;
 
 public interface FindServicesByTypeUseCasePort {
-    Flux<Service> findAllByType(ServiceType type, ServiceStatus status);
+    Flux<Service> handle(ServiceType type, ServiceStatus status);
 }

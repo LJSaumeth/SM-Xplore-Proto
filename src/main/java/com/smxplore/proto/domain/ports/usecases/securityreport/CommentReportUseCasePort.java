@@ -7,5 +7,5 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CommentReportUseCasePort {
-    Mono<Comment> handle(UUID reportId, Comment comment);
+    Mono<Comment> handle(Comment comment);
 }
