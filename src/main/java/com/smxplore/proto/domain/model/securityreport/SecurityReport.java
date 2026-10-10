@@ -10,7 +10,7 @@ import lombok.Getter;
 import java.time.Instant;
 import java.util.*;
 
-@Builder
+@Builder(toBuilder = true)
 @Getter
 public class SecurityReport {
     private final UUID id;
@@ -20,9 +20,6 @@ public class SecurityReport {
 
     @Builder.Default
     private final List<String> photosUrls = new ArrayList<>();
-
-    @Builder.Default
-    private Integer likes = 0;
 
     @Builder.Default
     private SecurityReportStatus status = SecurityReportStatus.ONGOING;
@@ -70,14 +67,6 @@ public class SecurityReport {
 
     public boolean isSolved(){
         return SecurityReportStatus.SOLVED.equals(status);
-    }
-
-    public void giveLike(){
-        likes++;
-    }
-
-    public void removeLike(){
-        likes--;
     }
 
     public void markAsSolved(){
