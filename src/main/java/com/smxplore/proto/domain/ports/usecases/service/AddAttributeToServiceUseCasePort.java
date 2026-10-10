@@ -8,5 +8,5 @@ import java.util.Collection;
 import java.util.UUID;
 
 public interface AddAttributeToServiceUseCasePort {
-    Mono<Service> handle(UUID reportId, Collection<Attribute> attributes);
+    Mono<Service> handle(UUID serviceId, Collection<Attribute> attributes);
 }

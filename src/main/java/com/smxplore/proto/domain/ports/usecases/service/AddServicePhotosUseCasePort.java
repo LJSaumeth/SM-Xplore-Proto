@@ -7,5 +7,5 @@ import java.util.Collection;
 import java.util.UUID;
 
 public interface AddServicePhotosUseCasePort {
-    Mono<Service> handle(UUID reportId, Collection<String> photos);
+    Mono<Service> handle(UUID serviceId, Collection<String> photos);
 }

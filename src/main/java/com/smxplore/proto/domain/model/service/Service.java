@@ -1,5 +1,7 @@
 package com.smxplore.proto.domain.model.service;
 
+import com.smxplore.proto.domain.exceptions.attribute.InvalidAttributeNameException;
+import com.smxplore.proto.domain.exceptions.attribute.NullAttributeException;
 import com.smxplore.proto.domain.exceptions.service.InvalidServiceNameException;
 import com.smxplore.proto.domain.exceptions.service.InvalidServicePriceException;
 import com.smxplore.proto.domain.exceptions.service.TooManyExtraAttributeException;
@@ -83,6 +85,9 @@ public class Service {
     public void addExtra(Attribute extra) {
         if (extras.size() >= 15)
             throw new TooManyExtraAttributeException("Too many extra attribute. Max: 15");
+        if (extra == null)
+            throw new NullAttributeException("Attribute's extra is null.");
+        extra.validate();
         extras.addAttribute(extra);
     }
 
