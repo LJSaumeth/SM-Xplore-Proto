@@ -1,6 +1,8 @@
 package com.smxplore.proto.domain.ports.usecases;
 
+import reactor.core.publisher.Mono;
+
 public interface RecoverPasswordUseCasePort {
 
-    void handle(String email);
+    Mono<Void> handle(String email);
 }

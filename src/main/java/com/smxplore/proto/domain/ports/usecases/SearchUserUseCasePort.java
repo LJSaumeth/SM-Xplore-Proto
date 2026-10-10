@@ -3,9 +3,9 @@ package com.smxplore.proto.domain.ports.usecases;
 import com.smxplore.proto.domain.model.user.User;
 import com.smxplore.proto.domain.ports.repository.UserSearchCriteria;
 
-import java.util.List;
+import reactor.core.publisher.Flux;
 
 public interface SearchUserUseCasePort {
 
-    List<User> handle(UserSearchCriteria criteria);
+    Flux<User> handle(UserSearchCriteria criteria);
 }

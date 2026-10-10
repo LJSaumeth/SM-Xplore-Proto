@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smxplore.proto.domain.exceptions.InvalidUserDataException;
+import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
 import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.model.user.DniType;
 import com.smxplore.proto.domain.model.user.UserRole;
@@ -18,86 +19,109 @@ import java.util.UUID;
 
 class TouristTest {
 
-    private Tourist buildTourist() {
-        return new Tourist(
-                UUID.randomUUID(),
-                "John Doe",
-                "john.doe@example.com",
-                "+573001234567",
-                "hashed-password",
-                UserStatus.ACTIVE,
-                Instant.now(),
-                "123456789",
-                DniType.CITIZENSHIP_CARD,
-                "es",
-                null,
-                "Colombian");
+    private Tourist validTourist() {
+        return Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName("John Doe")
+                .email("john.doe@example.com")
+                .phone("+573001234567")
+                .passwordHash("hashed-password")
+                .role(UserRole.TOURIST)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("123456789")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
     }
 
     @Test
-    void shouldBuildTouristWithTouristRole() {
-        Tourist tourist = buildTourist();
+    void shouldBuildAndValidateTourist() {
+        Tourist tourist = validTourist();
+
+        tourist.validate();
 
         assertEquals(UserRole.TOURIST, tourist.getRole());
         assertEquals("john.doe@example.com", tourist.getEmail());
     }
 
     @Test
-    void shouldNormalizeEmailToLowerCase() {
-        Tourist tourist = new Tourist(
-                UUID.randomUUID(),
-                "John Doe",
-                "John.Doe@Example.COM",
-                "+573001234567",
-                "hashed-password",
-                UserStatus.ACTIVE,
-                Instant.now(),
-                "123456789",
-                DniType.CITIZENSHIP_CARD,
-                null,
-                null,
-                null);
+    void shouldNormalizeEmailToLowerCaseOnValidation() {
+        Tourist tourist = Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName("John Doe")
+                .email("John.Doe@Example.COM")
+                .phone("+573001234567")
+                .passwordHash("hashed-password")
+                .role(UserRole.TOURIST)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("123456789")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+
+        tourist.validate();
 
         assertEquals("john.doe@example.com", tourist.getEmail());
     }
 
     @Test
     void shouldRejectInvalidEmail() {
-        assertThrows(InvalidUserDataException.class, () -> new Tourist(
-                UUID.randomUUID(),
-                "John Doe",
-                "not-an-email",
-                "+573001234567",
-                "hashed-password",
-                UserStatus.ACTIVE,
-                Instant.now(),
-                "123456789",
-                DniType.CITIZENSHIP_CARD,
-                null,
-                null,
-                null));
+        Tourist tourist = Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName("John Doe")
+                .email("not-an-email")
+                .phone("+573001234567")
+                .passwordHash("hashed-password")
+                .role(UserRole.TOURIST)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("123456789")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+
+        assertThrows(InvalidUserDataException.class, tourist::validate);
     }
 
     @Test
     void shouldRejectBlankFullName() {
-        assertThrows(InvalidUserDataException.class, () -> new Tourist(
-                UUID.randomUUID(),
-                " ",
-                "john.doe@example.com",
-                "+573001234567",
-                "hashed-password",
-                UserStatus.ACTIVE,
-                Instant.now(),
-                "123456789",
-                DniType.CITIZENSHIP_CARD,
-                null,
-                null,
-                null));
+        Tourist tourist = Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName(" ")
+                .email("john.doe@example.com")
+                .phone("+573001234567")
+                .passwordHash("hashed-password")
+                .role(UserRole.TOURIST)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("123456789")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+
+        assertThrows(InvalidUserDataException.class, tourist::validate);
+    }
+
+    @Test
+    void shouldRejectRoleThatDoesNotMatchTheSubtype() {
+        Tourist tourist = Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName("John Doe")
+                .email("john.doe@example.com")
+                .phone("+573001234567")
+                .passwordHash("hashed-password")
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("123456789")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+
+        assertThrows(InvalidUserRoleException.class, tourist::validate);
     }
 
     @Test
     void shouldUpdateProfile() {
-        Tourist tourist = buildTourist();
+        Tourist tourist = validTourist();
+        tourist.validate();
 
         tourist.updateProfile("Jane Doe", "jane.doe@example.com", "+573009876543");
 
@@ -108,7 +132,8 @@ class TouristTest {
 
     @Test
     void shouldBlockAndActivateAccount() {
-        Tourist tourist = buildTourist();
+        Tourist tourist = validTourist();
+        tourist.validate();
 
         tourist.block();
         assertFalse(tourist.isActive());

@@ -1,18 +1,18 @@
 package com.smxplore.proto.domain.model.serviceprovider;
 
+import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
 import com.smxplore.proto.domain.model.user.User;
 import com.smxplore.proto.domain.model.user.UserRole;
-import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.model.user.UserValidation;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
-import java.time.Instant;
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Getter
+@SuperBuilder
 public class ServiceProvider extends User {
 
     private final String nit;
@@ -22,27 +22,14 @@ public class ServiceProvider extends User {
     private Double longitude;
     private LocalDate startOperationDate;
 
-    public ServiceProvider(
-            UUID id,
-            String fullName,
-            String email,
-            String phone,
-            String passwordHash,
-            UserStatus status,
-            Instant signedUpAt,
-            String nit,
-            String serviceType,
-            RegistrationStatus registrationStatus,
-            Double latitude,
-            Double longitude,
-            LocalDate startOperationDate) {
-        super(id, fullName, email, phone, passwordHash, UserRole.SERVICE_PROVIDER, status, signedUpAt);
-        this.nit = UserValidation.requireText(nit, "nit");
-        this.serviceType = serviceType;
-        this.registrationStatus = UserValidation.requireNonNull(registrationStatus, "registrationStatus");
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.startOperationDate = startOperationDate;
+    @Override
+    public void validate() {
+        super.validate();
+        if (getRole() != UserRole.SERVICE_PROVIDER) {
+            throw new InvalidUserRoleException("A ServiceProvider must have the role SERVICE_PROVIDER.");
+        }
+        UserValidation.requireText(nit, "nit");
+        UserValidation.requireNonNull(registrationStatus, "registrationStatus");
     }
 
     public void updateProviderDetails(

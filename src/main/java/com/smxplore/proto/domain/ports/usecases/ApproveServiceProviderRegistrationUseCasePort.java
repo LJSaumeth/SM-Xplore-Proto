@@ -2,9 +2,11 @@ package com.smxplore.proto.domain.ports.usecases;
 
 import com.smxplore.proto.domain.model.serviceprovider.ServiceProvider;
 
+import reactor.core.publisher.Mono;
+
 import java.util.UUID;
 
 public interface ApproveServiceProviderRegistrationUseCasePort {
 
-    ServiceProvider handle(UUID serviceProviderId);
+    Mono<ServiceProvider> handle(UUID serviceProviderId);
 }

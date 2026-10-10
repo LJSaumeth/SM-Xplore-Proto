@@ -3,11 +3,13 @@ package com.smxplore.proto.domain.model.user;
 import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Getter
+@SuperBuilder
 public abstract class User {
 
     private final UUID id;
@@ -19,17 +21,9 @@ public abstract class User {
     private UserStatus status;
     private final Instant signedUpAt;
 
-    protected User(
-            UUID id,
-            String fullName,
-            String email,
-            String phone,
-            String passwordHash,
-            UserRole role,
-            UserStatus status,
-            Instant signedUpAt) {
-        this.id = UserValidation.requireId(id);
-        this.signedUpAt = UserValidation.requireInstant(signedUpAt, "signedUpAt");
+    public void validate() {
+        UserValidation.requireId(id);
+        UserValidation.requireInstant(signedUpAt, "signedUpAt");
         this.fullName = UserValidation.validateFullName(fullName);
         this.email = UserValidation.validateEmail(email);
         this.phone = UserValidation.validatePhone(phone);
@@ -39,17 +33,20 @@ public abstract class User {
     }
 
     public void updateProfile(String fullName, String email, String phone) {
-        this.fullName = UserValidation.validateFullName(fullName);
-        this.email = UserValidation.validateEmail(email);
-        this.phone = UserValidation.validatePhone(phone);
+        this.fullName = fullName;
+        this.email = email;
+        this.phone = phone;
+        validate();
     }
 
     public void changeRole(UserRole newRole) {
-        this.role = UserValidation.requireNonNull(newRole, "role");
+        this.role = newRole;
+        validate();
     }
 
     public void changePasswordHash(String newPasswordHash) {
-        this.passwordHash = UserValidation.validatePasswordHash(newPasswordHash);
+        this.passwordHash = newPasswordHash;
+        validate();
     }
 
     public void activate() {
