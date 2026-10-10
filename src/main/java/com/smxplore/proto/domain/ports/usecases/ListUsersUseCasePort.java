@@ -2,9 +2,9 @@ package com.smxplore.proto.domain.ports.usecases;
 
 import com.smxplore.proto.domain.model.user.User;
 
-import java.util.List;
+import reactor.core.publisher.Flux;
 
 public interface ListUsersUseCasePort {
 
-    List<User> handle();
+    Flux<User> handle();
 }
