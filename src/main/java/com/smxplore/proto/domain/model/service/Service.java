@@ -20,7 +20,7 @@ public class Service {
     private final UUID id;
     private final String name;
     private final ServiceType type;
-    private final ProviderRef provider;
+    private ProviderRef provider;
     private final Location location;
     private BigDecimal price;
 

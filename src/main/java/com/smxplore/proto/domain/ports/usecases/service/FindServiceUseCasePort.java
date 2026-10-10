@@ -1,10 +1,10 @@
 package com.smxplore.proto.domain.ports.usecases.service;
 
 import com.smxplore.proto.domain.model.service.Service;
+import reactor.core.publisher.Mono;
 
-import java.util.Optional;
 import java.util.UUID;
 
 public interface FindServiceUseCasePort {
-    Optional<Service> handle(UUID serviceId);
+    Mono<Service> handle(UUID serviceId);
 }

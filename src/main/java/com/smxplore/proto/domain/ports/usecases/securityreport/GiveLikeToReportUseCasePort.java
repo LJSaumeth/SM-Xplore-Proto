@@ -1,7 +1,9 @@
 package com.smxplore.proto.domain.ports.usecases.securityreport;
 
+import reactor.core.publisher.Mono;
+
 import java.util.UUID;
 
 public interface GiveLikeToReportUseCasePort {
-    void handle(UUID reportId, boolean remove);
+    Mono<Void> handle(UUID reportId, boolean remove);
 }

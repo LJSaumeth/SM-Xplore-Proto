@@ -2,9 +2,8 @@ package com.smxplore.proto.domain.ports.usecases.securityreport;
 
 import com.smxplore.proto.domain.model.securityreport.SecurityReport;
 import com.smxplore.proto.domain.model.securityreport.SecurityReportStatus;
-import com.smxplore.proto.domain.model.types.Page;
-import com.smxplore.proto.domain.model.types.PageRequest;
+import reactor.core.publisher.Flux;
 
 public interface ConsultReportsUseCasePort {
-    Page<SecurityReport> handle(SecurityReportStatus status, PageRequest pageRequest);
+    Flux<SecurityReport> handle(SecurityReportStatus status);
 }

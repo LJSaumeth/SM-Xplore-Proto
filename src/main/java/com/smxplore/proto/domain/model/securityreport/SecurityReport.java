@@ -14,7 +14,7 @@ import java.util.*;
 @Getter
 public class SecurityReport {
     private final UUID id;
-    private final UserRef user;
+    private UserRef user;
     private String text;
     private final Location location;
 

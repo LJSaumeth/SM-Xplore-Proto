@@ -1,10 +1,10 @@
 package com.smxplore.proto.domain.ports.usecases.service;
 
 import com.smxplore.proto.domain.model.service.Service;
+import reactor.core.publisher.Flux;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface FindServicesByProviderUseCasePort {
-    List<Service> handle(UUID providerId);
+    Flux<Service> handle(UUID providerId);
 }
