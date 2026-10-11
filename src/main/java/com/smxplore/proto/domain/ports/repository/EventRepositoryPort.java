@@ -1,7 +1,6 @@
 package com.smxplore.proto.domain.ports.repository;
 
 import com.smxplore.proto.domain.model.event.Event;
-import com.smxplore.proto.domain.model.event.EventStatus;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,10 +16,6 @@ public interface EventRepositoryPort {
     Mono<Boolean> existsById(UUID id);
 
     Flux<Event> findAll();
-
-    Flux<Event> findAllByStatus(EventStatus status);
-
-    Flux<Event> findAllBySiteId(UUID siteId);
 
     Flux<Event> searchByName(String name);
 }

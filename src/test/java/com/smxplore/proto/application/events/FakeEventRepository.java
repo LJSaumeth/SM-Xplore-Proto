@@ -1,7 +1,6 @@
 package com.smxplore.proto.application.events;
 
 import com.smxplore.proto.domain.model.event.Event;
-import com.smxplore.proto.domain.model.event.EventStatus;
 import com.smxplore.proto.domain.ports.repository.EventRepositoryPort;
 
 import reactor.core.publisher.Flux;
@@ -34,16 +33,6 @@ class FakeEventRepository implements EventRepositoryPort {
     @Override
     public Flux<Event> findAll() {
         return Flux.fromIterable(events.values());
-    }
-
-    @Override
-    public Flux<Event> findAllByStatus(EventStatus status) {
-        return findAll().filter(event -> event.getStatus() == status);
-    }
-
-    @Override
-    public Flux<Event> findAllBySiteId(UUID siteId) {
-        return findAll().filter(event -> siteId.equals(event.getSiteId()));
     }
 
     @Override

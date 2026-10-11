@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,10 +69,10 @@ class ActivityUseCasesTest {
     void shouldRegisterValidActivity() {
         UUID id = UUID.randomUUID();
 
-        Activity saved = registerActivity.handle(validActivity(id)).block();
+        Activity saved = Objects.requireNonNull(registerActivity.handle(validActivity(id)).block());
 
         assertEquals(id, saved.getId());
-        assertTrue(activityRepo.existsById(id).block());
+        assertTrue(Objects.requireNonNull(activityRepo.existsById(id).block()));
     }
 
     @Test
@@ -91,7 +92,7 @@ class ActivityUseCasesTest {
         UUID id = UUID.randomUUID();
         Activity withoutGuide = validActivity(id).toBuilder().guideId(null).build();
 
-        Activity saved = registerActivity.handle(withoutGuide).block();
+        Activity saved = Objects.requireNonNull(registerActivity.handle(withoutGuide).block());
 
         assertNull(saved.getGuideId());
     }
@@ -101,8 +102,8 @@ class ActivityUseCasesTest {
         UUID id = UUID.randomUUID();
         activityRepo.save(validActivity(id)).block();
 
-        Activity updated = updateActivity.handle(id, "Sunset Kayak", "Nautical", "New description",
-                new BigDecimal("99999.00")).block();
+        Activity updated = Objects.requireNonNull(updateActivity.handle(id, "Sunset Kayak", "Nautical",
+                "New description", new BigDecimal("99999.00")).block());
 
         assertEquals("Sunset Kayak", updated.getName());
         assertEquals("Nautical", updated.getCategory());
@@ -124,7 +125,7 @@ class ActivityUseCasesTest {
         Instant newStart = Instant.now().plusSeconds(7200);
         Instant newEnd = newStart.plusSeconds(3600);
 
-        Activity updated = manageAvailability.handle(id, newStart, newEnd).block();
+        Activity updated = Objects.requireNonNull(manageAvailability.handle(id, newStart, newEnd).block());
 
         assertEquals(newStart, updated.getStartsAt());
         assertEquals(newEnd, updated.getEndsAt());
@@ -143,7 +144,7 @@ class ActivityUseCasesTest {
         UUID id = UUID.randomUUID();
         activityRepo.save(validActivity(id)).block();
 
-        Activity updated = manageSlots.handle(id, 25).block();
+        Activity updated = Objects.requireNonNull(manageSlots.handle(id, 25).block());
 
         assertEquals(25, updated.getMaxCapacity());
     }
@@ -167,7 +168,7 @@ class ActivityUseCasesTest {
         UUID id = UUID.randomUUID();
         activityRepo.save(validActivity(id).toBuilder().status(ActivityStatus.PUBLISHED).build()).block();
 
-        Activity updated = cancelActivity.handle(id).block();
+        Activity updated = Objects.requireNonNull(cancelActivity.handle(id).block());
 
         assertEquals(ActivityStatus.CANCELLED, updated.getStatus());
     }
@@ -191,7 +192,7 @@ class ActivityUseCasesTest {
         activityRepo.save(validActivity(UUID.randomUUID())).block();
         activityRepo.save(validActivity(UUID.randomUUID())).block();
 
-        List<Activity> activities = consultActivities.handle().collectList().block();
+        List<Activity> activities = Objects.requireNonNull(consultActivities.handle().collectList().block());
 
         assertEquals(2, activities.size());
     }
@@ -201,10 +202,11 @@ class ActivityUseCasesTest {
         activityRepo.save(validActivity(UUID.randomUUID())).block();
         activityRepo.save(validActivity(UUID.randomUUID()).toBuilder().category("Nautical").build()).block();
 
-        List<Activity> matches = findActivitiesByCategory.handle("Water Sports").collectList().block();
+        List<Activity> matches = Objects.requireNonNull(
+                findActivitiesByCategory.handle("Water Sports").collectList().block());
 
         assertEquals(1, matches.size());
-        assertEquals("Water Sports", matches.get(0).getCategory());
+        assertEquals("Water Sports", matches.getFirst().getCategory());
     }
 
     @Test
@@ -214,7 +216,7 @@ class ActivityUseCasesTest {
         activityRepo.save(validActivity(UUID.randomUUID()).toBuilder().siteId(siteId).build()).block();
         activityRepo.save(validActivity(UUID.randomUUID())).block();
 
-        List<Activity> matches = findActivitiesBySite.handle(siteId).collectList().block();
+        List<Activity> matches = Objects.requireNonNull(findActivitiesBySite.handle(siteId).collectList().block());
 
         assertEquals(2, matches.size());
     }
@@ -224,7 +226,7 @@ class ActivityUseCasesTest {
         UUID id = UUID.randomUUID();
         activityRepo.save(validActivity(id)).block();
 
-        Activity found = viewActivityDetails.handle(id).block();
+        Activity found = Objects.requireNonNull(viewActivityDetails.handle(id).block());
 
         assertEquals(id, found.getId());
     }

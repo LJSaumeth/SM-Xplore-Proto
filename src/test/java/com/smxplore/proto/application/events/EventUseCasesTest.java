@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,10 +64,10 @@ class EventUseCasesTest {
     void shouldRegisterValidEvent() {
         UUID id = UUID.randomUUID();
 
-        Event saved = registerEvent.handle(eventWith(id)).block();
+        Event saved = Objects.requireNonNull(registerEvent.handle(eventWith(id)).block());
 
         assertEquals(id, saved.getId());
-        assertTrue(eventRepo.existsById(id).block());
+        assertTrue(Objects.requireNonNull(eventRepo.existsById(id).block()));
     }
 
     @Test
@@ -86,7 +87,7 @@ class EventUseCasesTest {
         UUID id = UUID.randomUUID();
         eventRepo.save(eventWith(id)).block();
 
-        Event updated = changeEventStatus.handle(id, EventStatus.PUBLISHED).block();
+        Event updated = Objects.requireNonNull(changeEventStatus.handle(id, EventStatus.PUBLISHED).block());
 
         assertEquals(EventStatus.PUBLISHED, updated.getStatus());
     }
@@ -111,7 +112,7 @@ class EventUseCasesTest {
         UUID id = UUID.randomUUID();
         eventRepo.save(eventWith(id)).block();
 
-        Event updated = estimateEventAttendance.handle(id, 200).block();
+        Event updated = Objects.requireNonNull(estimateEventAttendance.handle(id, 200).block());
 
         assertEquals(200, updated.getExpectedAttendance());
     }
@@ -136,7 +137,7 @@ class EventUseCasesTest {
         eventRepo.save(eventWith(UUID.randomUUID(), "Sunset Kayak Tour")).block();
         eventRepo.save(eventWith(UUID.randomUUID(), "City Walking Tour")).block();
 
-        List<Event> events = consultEvents.handle().collectList().block();
+        List<Event> events = Objects.requireNonNull(consultEvents.handle().collectList().block());
 
         assertEquals(2, events.size());
     }
@@ -146,10 +147,10 @@ class EventUseCasesTest {
         eventRepo.save(eventWith(UUID.randomUUID(), "Sunset Kayak Tour")).block();
         eventRepo.save(eventWith(UUID.randomUUID(), "City Walking Tour")).block();
 
-        List<Event> matches = searchEvents.handle("Kayak").collectList().block();
+        List<Event> matches = Objects.requireNonNull(searchEvents.handle("Kayak").collectList().block());
 
         assertEquals(1, matches.size());
-        assertEquals("Sunset Kayak Tour", matches.get(0).getName());
+        assertEquals("Sunset Kayak Tour", matches.getFirst().getName());
     }
 
     @Test
@@ -157,7 +158,7 @@ class EventUseCasesTest {
         UUID id = UUID.randomUUID();
         eventRepo.save(eventWith(id)).block();
 
-        Event found = viewEventDetails.handle(id).block();
+        Event found = Objects.requireNonNull(viewEventDetails.handle(id).block());
 
         assertEquals(id, found.getId());
     }

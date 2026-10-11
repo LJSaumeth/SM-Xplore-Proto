@@ -1,7 +1,9 @@
 package com.smxplore.proto.domain.exceptions.activity;
 
-public class InvalidActivityCapacityException extends RuntimeException {
+import java.io.Serial;
 
+public class InvalidActivityCapacityException extends RuntimeException {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public InvalidActivityCapacityException(String message) {

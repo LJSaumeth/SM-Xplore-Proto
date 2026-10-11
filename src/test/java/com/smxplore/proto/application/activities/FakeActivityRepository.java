@@ -1,7 +1,6 @@
 package com.smxplore.proto.application.activities;
 
 import com.smxplore.proto.domain.model.activity.Activity;
-import com.smxplore.proto.domain.model.activity.ActivityStatus;
 import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 
 import reactor.core.publisher.Flux;
@@ -37,11 +36,6 @@ class FakeActivityRepository implements ActivityRepositoryPort {
     }
 
     @Override
-    public Flux<Activity> findAllByStatus(ActivityStatus status) {
-        return findAll().filter(activity -> activity.getStatus() == status);
-    }
-
-    @Override
     public Flux<Activity> findAllByCategory(String category) {
         return findAll().filter(activity -> category.equalsIgnoreCase(activity.getCategory()));
     }
@@ -49,10 +43,5 @@ class FakeActivityRepository implements ActivityRepositoryPort {
     @Override
     public Flux<Activity> findAllBySiteId(UUID siteId) {
         return findAll().filter(activity -> siteId.equals(activity.getSiteId()));
-    }
-
-    @Override
-    public Flux<Activity> findAllByGuideId(UUID guideId) {
-        return findAll().filter(activity -> guideId.equals(activity.getGuideId()));
     }
 }
