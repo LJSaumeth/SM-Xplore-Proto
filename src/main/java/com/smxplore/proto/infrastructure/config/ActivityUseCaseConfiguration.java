@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.config;
 
 import com.smxplore.proto.application.activities.CancelActivityUseCase;
+import com.smxplore.proto.application.activities.ChangeActivityStatusUseCase;
 import com.smxplore.proto.application.activities.ConsultActivitiesUseCase;
 import com.smxplore.proto.application.activities.FindActivitiesByCategoryUseCase;
 import com.smxplore.proto.application.activities.FindActivitiesBySiteUseCase;
@@ -11,6 +12,7 @@ import com.smxplore.proto.application.activities.UpdateActivityUseCase;
 import com.smxplore.proto.application.activities.ViewActivityDetailsUseCase;
 import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.activity.CancelActivityUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.activity.ChangeActivityStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ConsultActivitiesUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByCategoryUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesBySiteUseCasePort;
@@ -68,5 +70,10 @@ public class ActivityUseCaseConfiguration {
     @Bean
     public CancelActivityUseCasePort cancelActivityUseCase(ActivityRepositoryPort activityRepository) {
         return new CancelActivityUseCase(activityRepository);
+    }
+
+    @Bean
+    public ChangeActivityStatusUseCasePort changeActivityStatusUseCase(ActivityRepositoryPort activityRepository) {
+        return new ChangeActivityStatusUseCase(activityRepository);
     }
 }

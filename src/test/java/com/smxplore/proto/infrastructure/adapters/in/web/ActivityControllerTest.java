@@ -1,9 +1,11 @@
 package com.smxplore.proto.infrastructure.adapters.in.web;
 
 import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityStatusTransitionException;
 import com.smxplore.proto.domain.model.activity.Activity;
 import com.smxplore.proto.domain.model.activity.ActivityStatus;
 import com.smxplore.proto.domain.ports.usecases.activity.CancelActivityUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.activity.ChangeActivityStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ConsultActivitiesUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByCategoryUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesBySiteUseCasePort;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -66,6 +69,9 @@ class ActivityControllerTest {
 
     @MockitoBean
     private CancelActivityUseCasePort cancelActivityUseCase;
+
+    @MockitoBean
+    private ChangeActivityStatusUseCasePort changeActivityStatusUseCase;
 
     @Autowired
     void configureClient(WebTestClient webTestClient) {
@@ -296,5 +302,38 @@ class ActivityControllerTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void changeStatusReturnsUpdatedActivity() {
+        var id = UUID.randomUUID();
+        given(changeActivityStatusUseCase.handle(id, ActivityStatus.PUBLISHED)).willReturn(Mono.just(
+                activityWith(id, ActivityStatus.PUBLISHED)));
+
+        webTestClient.patch().uri("/api/v1/activities/{activityId}/status", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    void changeStatusMapsInvalidTransitionToConflict() {
+        var id = UUID.randomUUID();
+        given(changeActivityStatusUseCase.handle(id, ActivityStatus.PUBLISHED)).willReturn(Mono.error(
+                new InvalidActivityStatusTransitionException(
+                        "Cannot change activity from CANCELLED to PUBLISHED")));
+
+        webTestClient.patch().uri("/api/v1/activities/{activityId}/status", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 }

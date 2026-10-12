@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
 import com.smxplore.proto.domain.ports.usecases.activity.CancelActivityUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.activity.ChangeActivityStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ConsultActivitiesUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByCategoryUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesBySiteUseCasePort;
@@ -12,6 +13,7 @@ import com.smxplore.proto.domain.ports.usecases.activity.ViewActivityDetailsUseC
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ActivityRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ActivityResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AvailabilityRequest;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ChangeActivityStatusRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.SlotsRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UpdateActivityRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ActivityWebMapper;
@@ -49,6 +51,7 @@ public class ActivityController {
     private final ManageAvailabilityUseCasePort manageAvailabilityUseCase;
     private final ManageSlotsUseCasePort manageSlotsUseCase;
     private final CancelActivityUseCasePort cancelActivityUseCase;
+    private final ChangeActivityStatusUseCasePort changeActivityStatusUseCase;
     private final ActivityWebMapper mapper;
 
     @PostMapping
@@ -111,5 +114,12 @@ public class ActivityController {
     @Operation(summary = "Cancel an activity")
     public Mono<ActivityResponse> cancel(@PathVariable UUID activityId) {
         return cancelActivityUseCase.handle(activityId).map(mapper::toResponse);
+    }
+
+    @PatchMapping("/{activityId}/status")
+    @Operation(summary = "Change the status of an activity")
+    public Mono<ActivityResponse> changeStatus(@PathVariable UUID activityId,
+                                               @Valid @RequestBody ChangeActivityStatusRequest request) {
+        return changeActivityStatusUseCase.handle(activityId, request.status()).map(mapper::toResponse);
     }
 }

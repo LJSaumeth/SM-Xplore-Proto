@@ -29,6 +29,7 @@ class ActivityUseCasesTest {
     private ManageAvailabilityUseCase manageAvailability;
     private ManageSlotsUseCase manageSlots;
     private CancelActivityUseCase cancelActivity;
+    private ChangeActivityStatusUseCase changeActivityStatus;
     private ConsultActivitiesUseCase consultActivities;
     private FindActivitiesByCategoryUseCase findActivitiesByCategory;
     private FindActivitiesBySiteUseCase findActivitiesBySite;
@@ -42,6 +43,7 @@ class ActivityUseCasesTest {
         manageAvailability = new ManageAvailabilityUseCase(activityRepo);
         manageSlots = new ManageSlotsUseCase(activityRepo);
         cancelActivity = new CancelActivityUseCase(activityRepo);
+        changeActivityStatus = new ChangeActivityStatusUseCase(activityRepo);
         consultActivities = new ConsultActivitiesUseCase(activityRepo);
         findActivitiesByCategory = new FindActivitiesByCategoryUseCase(activityRepo);
         findActivitiesBySite = new FindActivitiesBySiteUseCase(activityRepo);
@@ -185,6 +187,41 @@ class ActivityUseCasesTest {
         activityRepo.save(validActivity(id).toBuilder().status(ActivityStatus.CANCELLED).build()).block();
 
         assertThrows(InvalidActivityStatusTransitionException.class, () -> cancelActivity.handle(id).block());
+    }
+
+    @Test
+    void shouldChangeStatusOfExistingActivity() {
+        UUID id = UUID.randomUUID();
+        activityRepo.save(validActivity(id)).block();
+
+        Activity updated = Objects.requireNonNull(changeActivityStatus.handle(id, ActivityStatus.PUBLISHED).block());
+
+        assertEquals(ActivityStatus.PUBLISHED, updated.getStatus());
+    }
+
+    @Test
+    void shouldPausePublishedActivity() {
+        UUID id = UUID.randomUUID();
+        activityRepo.save(validActivity(id).toBuilder().status(ActivityStatus.PUBLISHED).build()).block();
+
+        Activity updated = Objects.requireNonNull(changeActivityStatus.handle(id, ActivityStatus.PAUSED).block());
+
+        assertEquals(ActivityStatus.PAUSED, updated.getStatus());
+    }
+
+    @Test
+    void shouldFailChangingStatusWhenActivityDoesNotExist() {
+        assertThrows(ActivityNotFoundException.class,
+                () -> changeActivityStatus.handle(UUID.randomUUID(), ActivityStatus.PUBLISHED).block());
+    }
+
+    @Test
+    void shouldFailChangingStatusWithInvalidTransition() {
+        UUID id = UUID.randomUUID();
+        activityRepo.save(validActivity(id).toBuilder().status(ActivityStatus.CANCELLED).build()).block();
+
+        assertThrows(InvalidActivityStatusTransitionException.class,
+                () -> changeActivityStatus.handle(id, ActivityStatus.PUBLISHED).block());
     }
 
     @Test
