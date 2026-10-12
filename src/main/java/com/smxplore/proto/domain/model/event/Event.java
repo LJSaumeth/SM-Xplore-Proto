@@ -22,7 +22,8 @@ public class Event {
     private static final int NAME_MAX_LENGTH = 150;
     private static final int CATEGORY_MAX_LENGTH = 50;
 
-    private final UUID id;
+    @Builder.Default
+    private final UUID id = UUID.randomUUID();
     private final UUID siteId;
     private String name;
     private String category;
