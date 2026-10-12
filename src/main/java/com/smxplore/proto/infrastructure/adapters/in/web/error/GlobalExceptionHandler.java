@@ -1,9 +1,24 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.error;
 
+import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityCapacityException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityNameException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityPriceException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityRequestException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityScheduleException;
+import com.smxplore.proto.domain.exceptions.activity.InvalidActivityStatusTransitionException;
 import com.smxplore.proto.domain.exceptions.attribute.AttributeAlreadyAddedException;
 import com.smxplore.proto.domain.exceptions.attribute.InvalidAttributeNameException;
 import com.smxplore.proto.domain.exceptions.attribute.InvalidAttributeValueException;
 import com.smxplore.proto.domain.exceptions.attribute.NullAttributeException;
+import com.smxplore.proto.domain.exceptions.event.EventNotFoundException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventCapacityException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventNameException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventPriceException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventRequestException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventScheduleException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventStatusTransitionException;
+import com.smxplore.proto.domain.exceptions.event.InvalidExpectedAttendanceException;
 import com.smxplore.proto.domain.exceptions.location.InvalidLocationParamsException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidCommentException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidReportRequestException;
@@ -37,12 +52,14 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class})
+    @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class,
+            EventNotFoundException.class, ActivityNotFoundException.class})
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.NOT_FOUND, exception.getMessage(), exchange);
     }
 
-    @ExceptionHandler({InvalidStatusTransitionException.class, AttributeAlreadyAddedException.class})
+    @ExceptionHandler({InvalidStatusTransitionException.class, AttributeAlreadyAddedException.class,
+            InvalidEventStatusTransitionException.class, InvalidActivityStatusTransitionException.class})
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.CONFLICT, exception.getMessage(), exchange);
     }
@@ -64,7 +81,18 @@ public class GlobalExceptionHandler {
             InvalidServiceNameException.class,
             InvalidServicePriceException.class,
             InvalidServiceProviderException.class,
-            InvalidServiceProviderNameException.class
+            InvalidServiceProviderNameException.class,
+            InvalidEventRequestException.class,
+            InvalidEventNameException.class,
+            InvalidEventPriceException.class,
+            InvalidEventCapacityException.class,
+            InvalidEventScheduleException.class,
+            InvalidExpectedAttendanceException.class,
+            InvalidActivityRequestException.class,
+            InvalidActivityNameException.class,
+            InvalidActivityPriceException.class,
+            InvalidActivityCapacityException.class,
+            InvalidActivityScheduleException.class
     })
     public ResponseEntity<ApiErrorResponse> handleBadRequest(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.BAD_REQUEST, exception.getMessage(), exchange);
