@@ -1,0 +1,4 @@
+# Perfil usado por docker compose para pruebas locales.
+spring:
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://mongodb:27017/ahorasi}

@@ -1,3 +1,13 @@
 spring:
   application:
     name: ahorasi
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/ahorasi}
+    representation:
+      uuid: standard
+  data:
+    mongodb:
+      # Indexes are ensured explicitly by MongoIndexInitializer at startup
+      auto-index-creation: false
+      representation:
+        big-decimal: decimal128
