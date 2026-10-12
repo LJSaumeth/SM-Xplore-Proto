@@ -1,5 +1,6 @@
 package com.smxplore.proto.application.services;
 
+import com.smxplore.proto.domain.exceptions.service.InvalidServiceProviderException;
 import com.smxplore.proto.domain.exceptions.service.InvalidServiceRequestException;
 import com.smxplore.proto.domain.model.service.Service;
 import com.smxplore.proto.domain.model.types.ProviderRef;
@@ -14,7 +15,6 @@ public class RegisterServiceUseCase implements RegisterServiceUseCasePort {
 
     @Override
     public Mono<Service> handle(ProviderRef provider, Service service) {
-        provider.validate();
         return Mono.justOrEmpty(service)
                 .switchIfEmpty(Mono.error(new InvalidServiceRequestException("Service cannot be null")))
                 .map(s -> validateAndBuild(s, provider))
@@ -22,7 +22,9 @@ public class RegisterServiceUseCase implements RegisterServiceUseCasePort {
     }
 
     private Service validateAndBuild(Service service, ProviderRef provider) {
-        service.validate();
-        return service.toBuilder().provider(provider).build();
+        if (provider == null) throw new InvalidServiceProviderException("Provider cannot be null");
+        var serviceWithProvider = service.toBuilder().provider(provider).build();
+        serviceWithProvider.validate();
+        return serviceWithProvider;
     }
 }

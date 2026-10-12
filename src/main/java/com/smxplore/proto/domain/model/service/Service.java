@@ -1,9 +1,10 @@
 package com.smxplore.proto.domain.model.service;
 
-import com.smxplore.proto.domain.exceptions.attribute.InvalidAttributeNameException;
 import com.smxplore.proto.domain.exceptions.attribute.NullAttributeException;
+import com.smxplore.proto.domain.exceptions.location.InvalidLocationParamsException;
 import com.smxplore.proto.domain.exceptions.service.InvalidServiceNameException;
 import com.smxplore.proto.domain.exceptions.service.InvalidServicePriceException;
+import com.smxplore.proto.domain.exceptions.service.InvalidServiceProviderException;
 import com.smxplore.proto.domain.exceptions.service.TooManyExtraAttributeException;
 import com.smxplore.proto.domain.model.types.Attribute;
 import com.smxplore.proto.domain.model.types.AttributeMap;
@@ -19,7 +20,8 @@ import java.util.*;
 @Builder(toBuilder = true)
 @Getter
 public class Service {
-    private final UUID id;
+    @Builder.Default
+    private final UUID id = UUID.randomUUID();
     private final String name;
     private final ServiceType type;
     private ProviderRef provider;
@@ -41,7 +43,9 @@ public class Service {
     public void validate() {
         validateName();
         validatePrice(price);
+        if (provider == null) throw new InvalidServiceProviderException("Provider is mandatory");
         provider.validate();
+        if (location == null) throw new InvalidLocationParamsException();
         location.validate();
     }
 
@@ -72,10 +76,9 @@ public class Service {
         photosUrls.add(url);
     }
 
-    public boolean addPhotos(Collection<String> photoUrls) {
-        if (photoUrls == null || photoUrls.isEmpty()) return false;
+    public void addPhotos(Collection<String> photoUrls) {
+        if (photoUrls == null || photoUrls.isEmpty()) return;
         photoUrls.forEach(this::addPhoto);
-        return true;
     }
 
     public List<String> getPhotosUrls() {

@@ -16,9 +16,9 @@ public interface SecurityReportRepositoryPort {
 
     Flux<SecurityReport> findAll();
 
-    void changeText(UUID reportId, String content);
+    Mono<Void> changeText(UUID reportId, String content);
 
-    void changeStatus(UUID reportId, SecurityReportStatus status);
+    Mono<Void> changeStatus(UUID reportId, SecurityReportStatus status);
 
     Flux<SecurityReport> findAllByUserId(UUID userId);
 }

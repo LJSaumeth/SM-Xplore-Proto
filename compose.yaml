@@ -1,0 +1,42 @@
+# Levanta la app + MongoDB para probar la API desde Swagger
+# (http://localhost:8080/swagger-ui.html) o desde un cliente frontend.
+#
+# Uso:
+#   docker compose up --build      # construye la imagen y levanta todo
+#   docker compose up mongodb -d   # solo MongoDB (p. ej. para correr la app desde el IDE)
+#   docker compose logs -f app     # ver logs de la app
+#   docker compose down            # detiene todo (usa -v para borrar también los datos)
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: ahorasi-mongodb
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ahorasi-app
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      # application-docker.yaml apunta a la base de datos del compose y ajusta
+      # el perfil de pruebas
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

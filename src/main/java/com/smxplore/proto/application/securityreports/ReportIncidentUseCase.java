@@ -1,6 +1,7 @@
 package com.smxplore.proto.application.securityreports;
 
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidReportRequestException;
+import com.smxplore.proto.domain.exceptions.securityreport.InvalidUserReporterException;
 import com.smxplore.proto.domain.model.securityreport.SecurityReport;
 import com.smxplore.proto.domain.model.types.UserRef;
 import com.smxplore.proto.domain.ports.repository.SecurityReportRepositoryPort;
@@ -15,16 +16,16 @@ public class ReportIncidentUseCase implements ReportIncidentUseCasePort {
 
     @Override
     public Mono<SecurityReport> handle(UserRef user, SecurityReport report) {
-        user.validate();
         return Mono.justOrEmpty(report)
                 .switchIfEmpty(Mono.error(new InvalidReportRequestException("SecurityReport cannot be null")))
-                .map(securityReport -> validateAndBuild(report, user))
+                .map(securityReport -> validateAndBuild(securityReport, user))
                 .flatMap(securityReportRepo::save);
     }
 
     private SecurityReport validateAndBuild(SecurityReport report, UserRef user) {
-        report.validate();
-        return report.toBuilder().user(user).build();
+        if (user == null) throw new InvalidUserReporterException("User cannot be null");
+        var reportWithUser = report.toBuilder().user(user).build();
+        reportWithUser.validate();
+        return reportWithUser;
     }
 }
-

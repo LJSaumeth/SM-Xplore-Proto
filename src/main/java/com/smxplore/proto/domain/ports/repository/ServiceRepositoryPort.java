@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface ServiceRepositoryPort {
     Mono<Service> save(Service service);
 
-    boolean changeStatus(UUID serviceId, ServiceStatus newStatus);
+    Mono<Boolean> changeStatus(UUID serviceId, ServiceStatus newStatus);
 
     Flux<Service> findAllByStatusAndType(ServiceStatus status, ServiceType type);
 
@@ -26,5 +26,5 @@ public interface ServiceRepositoryPort {
 
     Flux<Service> findAll();
 
-    boolean changePrice(UUID serviceId, BigDecimal newPrice);
+    Mono<Boolean> changePrice(UUID serviceId, BigDecimal newPrice);
 }

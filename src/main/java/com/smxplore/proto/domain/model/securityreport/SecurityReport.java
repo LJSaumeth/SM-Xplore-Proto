@@ -13,7 +13,8 @@ import java.util.*;
 @Builder(toBuilder = true)
 @Getter
 public class SecurityReport {
-    private final UUID id;
+    @Builder.Default
+    private final UUID id = UUID.randomUUID();
     private UserRef user;
     private String text;
     private final Location location;

@@ -11,7 +11,8 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 @Getter
 public class Comment {
-    private Long id;
+    @Builder.Default
+    private final UUID id = UUID.randomUUID();
     private UUID reportId;
     private UserRef user;
     private String content;
