@@ -20,6 +20,11 @@ public class EventPostgresAdapter implements EventRepositoryPort {
     private final R2dbcEntityTemplate template;
     private final EventPersistenceMapper mapper;
 
+    /**
+     * R2DBC has no upsert, so an explicit existence check decides between insert and update.
+     * Ids are generated per registration and concurrent writes of the same row are not part
+     * of the current flows.
+     */
     @Override
     public Mono<Event> save(Event event) {
         var entity = mapper.toEntity(event);
@@ -45,6 +50,6 @@ public class EventPostgresAdapter implements EventRepositoryPort {
 
     @Override
     public Flux<Event> searchByName(String name) {
-        return repository.findByNameContaining(name).map(mapper::toDomain);
+        return repository.findByNameContainingIgnoreCase(name).map(mapper::toDomain);
     }
 }

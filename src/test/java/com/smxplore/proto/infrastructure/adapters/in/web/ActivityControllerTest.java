@@ -272,4 +272,29 @@ class ActivityControllerTest {
                 .exchange()
                 .expectStatus().isNotFound();
     }
+
+    @Test
+    void findOneReturnsActivity() {
+        var id = UUID.randomUUID();
+        given(viewActivityDetailsUseCase.handle(id)).willReturn(Mono.just(
+                activityWith(id, ActivityStatus.DRAFT)));
+
+        webTestClient.get().uri("/api/v1/activities/{activityId}", id)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(id.toString());
+    }
+
+    @Test
+    void findAllReturnsActivities() {
+        given(consultActivitiesUseCase.handle()).willReturn(Flux.just(
+                activityWith(UUID.randomUUID(), ActivityStatus.DRAFT)));
+
+        webTestClient.get().uri("/api/v1/activities")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
+    }
 }

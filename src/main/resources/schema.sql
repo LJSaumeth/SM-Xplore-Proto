@@ -35,3 +35,8 @@ CREATE TABLE IF NOT EXISTS actividad (
     ends_at       timestamptz NOT NULL,
     description   text
 );
+
+CREATE INDEX IF NOT EXISTS evento_sitio_idx ON evento (sitio_id);
+CREATE INDEX IF NOT EXISTS evento_name_idx ON evento (name);
+CREATE INDEX IF NOT EXISTS actividad_sitio_idx ON actividad (sitio_id);
+CREATE INDEX IF NOT EXISTS actividad_category_idx ON actividad (type);

@@ -62,7 +62,7 @@ class PostgresAdaptersIntegrationTest {
         assertThat(found.getDescription()).isEqualTo("Guided kayak tour at sunset.");
         assertThat(found.getExpectedAttendance()).isZero();
 
-        var matches = eventRepository.searchByName("Kayak").collectList().block();
+        var matches = eventRepository.searchByName("kayak").collectList().block();
         assertThat(matches).extracting(Event::getId).contains(saved.getId());
 
         var all = eventRepository.findAll().collectList().block();

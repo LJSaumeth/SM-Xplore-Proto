@@ -147,7 +147,7 @@ class EventUseCasesTest {
         eventRepo.save(eventWith(UUID.randomUUID(), "Sunset Kayak Tour")).block();
         eventRepo.save(eventWith(UUID.randomUUID(), "City Walking Tour")).block();
 
-        List<Event> matches = Objects.requireNonNull(searchEvents.handle("Kayak").collectList().block());
+        List<Event> matches = Objects.requireNonNull(searchEvents.handle("kayak").collectList().block());
 
         assertEquals(1, matches.size());
         assertEquals("Sunset Kayak Tour", matches.getFirst().getName());

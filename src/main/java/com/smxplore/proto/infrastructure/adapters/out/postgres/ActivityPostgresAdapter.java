@@ -20,6 +20,11 @@ public class ActivityPostgresAdapter implements ActivityRepositoryPort {
     private final R2dbcEntityTemplate template;
     private final ActivityPersistenceMapper mapper;
 
+    /**
+     * R2DBC has no upsert, so an explicit existence check decides between insert and update.
+     * Ids are generated per registration and concurrent writes of the same row are not part
+     * of the current flows.
+     */
     @Override
     public Mono<Activity> save(Activity activity) {
         var entity = mapper.toEntity(activity);

@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface EventR2dbcRepository extends ReactiveCrudRepository<EventEntity, UUID> {
 
-    Flux<EventEntity> findByNameContaining(String name);
+    Flux<EventEntity> findByNameContainingIgnoreCase(String name);
 }

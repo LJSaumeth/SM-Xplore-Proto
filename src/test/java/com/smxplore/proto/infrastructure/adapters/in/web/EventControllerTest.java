@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web;
 
 import com.smxplore.proto.domain.exceptions.event.EventNotFoundException;
+import com.smxplore.proto.domain.exceptions.event.InvalidEventNameException;
 import com.smxplore.proto.domain.exceptions.event.InvalidEventStatusTransitionException;
 import com.smxplore.proto.domain.model.event.Event;
 import com.smxplore.proto.domain.model.event.EventStatus;
@@ -29,6 +30,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 
@@ -199,5 +201,39 @@ class EventControllerTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.expectedAttendance").isEqualTo(200);
+    }
+
+    @Test
+    void findAllReturnsEvents() {
+        given(consultEventsUseCase.handle()).willReturn(Flux.just(
+                eventWith(UUID.randomUUID(), EventStatus.DRAFT)));
+
+        webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void domainValidationErrorMapsToBadRequest() {
+        given(registerEventUseCase.handle(any())).willReturn(Mono.error(
+                new InvalidEventNameException("Name must not exceed 150 characters.")));
+
+        webTestClient.post().uri("/api/v1/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                          "siteId": "%s",
+                          "name": "Sunset Kayak Tour",
+                          "category": "Nautical",
+                          "price": 150000.00,
+                          "maxCapacity": 12,
+                          "startsAt": "2026-11-01T10:00:00Z",
+                          "endsAt": "2026-11-01T12:00:00Z"
+                        }
+                        """.formatted(UUID.randomUUID()))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 }
