@@ -18,6 +18,12 @@ repositories {
     mavenCentral()
 }
 
+// CVE fix: Spring Boot 4.1.1 manages Jackson 2.x at 2.21.5 via its `jackson-2-bom.version` property,
+// and springdoc/swagger pull that stack transitively (flagged by the security scanner).
+// Overriding the managed BOM property keeps every Jackson 2.x module (core, databind, annotations,
+// dataformat-yaml, datatype-jsr310) aligned on the patched 2.21.7.
+extra["jackson-2-bom.version"] = "2.21.7"
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
