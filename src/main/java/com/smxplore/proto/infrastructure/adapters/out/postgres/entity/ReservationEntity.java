@@ -20,6 +20,9 @@ public record ReservationEntity(
         ReservationStatus status,
         Instant bookedAt,
         Instant bookedFor,
-        String notes
+        String notes,
+        UUID providerId,
+        UUID guideId,
+        String code
 ) {
 }

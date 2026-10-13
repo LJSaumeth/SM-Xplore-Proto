@@ -9,7 +9,10 @@ import java.util.UUID;
 
 public record ReservationResponse(
         UUID id,
+        String code,
         UUID touristId,
+        UUID providerId,
+        UUID guideId,
         int numberOfPeople,
         BigDecimal total,
         PaymentMethod paymentMethod,

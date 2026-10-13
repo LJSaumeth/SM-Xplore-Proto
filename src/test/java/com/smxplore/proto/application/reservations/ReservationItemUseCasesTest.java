@@ -8,6 +8,7 @@ import com.smxplore.proto.domain.exceptions.reservation.ReservationItemsNotAllow
 import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundException;
 import com.smxplore.proto.domain.exceptions.reservation.TooManyReservationItemsException;
 import com.smxplore.proto.domain.exceptions.service.ServiceNotFoundException;
+import com.smxplore.proto.domain.model.activity.Activity;
 import com.smxplore.proto.domain.model.reservation.PaymentMethod;
 import com.smxplore.proto.domain.model.reservation.Reservation;
 import com.smxplore.proto.domain.model.reservation.ReservationItem;
@@ -17,6 +18,7 @@ import com.smxplore.proto.domain.model.service.Service;
 import com.smxplore.proto.domain.model.service.ServiceType;
 import com.smxplore.proto.domain.model.types.Location;
 import com.smxplore.proto.domain.model.types.ProviderRef;
+import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ReservationItemRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ReservationRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
@@ -49,6 +51,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class ReservationItemUseCasesTest {
 
     private static final BigDecimal SERVICE_PRICE = new BigDecimal("50000.00");
+    private static final BigDecimal ACTIVITY_PRICE = new BigDecimal("80000.00");
 
     @Mock
     private ReservationRepositoryPort reservationRepo;
@@ -58,6 +61,9 @@ class ReservationItemUseCasesTest {
 
     @Mock
     private ServiceRepositoryPort serviceRepo;
+
+    @Mock
+    private ActivityRepositoryPort activityRepo;
 
     @Captor
     private ArgumentCaptor<Iterable<ReservationItem>> itemsCaptor;
@@ -70,7 +76,8 @@ class ReservationItemUseCasesTest {
 
     @BeforeEach
     void setUp() {
-        addReservationItemsUseCase = new AddReservationItemsUseCase(reservationRepo, reservationItemRepo, serviceRepo);
+        addReservationItemsUseCase = new AddReservationItemsUseCase(
+                reservationRepo, reservationItemRepo, serviceRepo, activityRepo);
         addReservationItemUseCase = new AddReservationItemUseCase(addReservationItemsUseCase);
         consultReservationItemsUseCase = new ConsultReservationItemsUseCase(reservationRepo, reservationItemRepo);
         consultOneReservationItemUseCase = new ConsultOneReservationItemUseCase(reservationItemRepo);
@@ -101,6 +108,7 @@ class ReservationItemUseCasesTest {
 
         verify(reservationRepo).save(reservation);
         assertThat(reservation.getTotal()).isEqualByComparingTo(SERVICE_PRICE);
+        assertThat(reservation.getProviderId()).isEqualTo(providerId);
     }
 
     @Test
@@ -319,6 +327,59 @@ class ReservationItemUseCasesTest {
                 .itemId(UUID.randomUUID())
                 .type(type)
                 .price(SERVICE_PRICE)
+                .build();
+    }
+
+    @Test
+    void addsAnActivityItemUsingTheCatalogPriceAndAssignsTheGuide() {
+        var reservation = reservation();
+        var guideId = UUID.randomUUID();
+        var item = item(ReservationItemType.ACTIVITY).toBuilder().price(new BigDecimal("1.00")).build();
+        given(reservationRepo.findByIdForUpdate(reservation.getId())).willReturn(Mono.just(reservation));
+        given(reservationItemRepo.findByReservationId(reservation.getId())).willReturn(Flux.empty());
+        given(activityRepo.findById(item.getItemId())).willReturn(Mono.just(activity(item.getItemId(), guideId)));
+        given(reservationItemRepo.saveAll(any())).willAnswer(invocation -> Flux.fromIterable(invocation.getArgument(0)));
+        given(reservationRepo.save(any())).willAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(addReservationItemUseCase.handle(reservation.getId(), item))
+                .assertNext(saved -> assertThat(saved.getPrice()).isEqualByComparingTo(ACTIVITY_PRICE))
+                .verifyComplete();
+
+        assertThat(reservation.getGuideId()).isEqualTo(guideId);
+    }
+
+    @Test
+    void rejectsActivitiesFromDifferentGuides() {
+        var reservation = reservation();
+        var existing = item(ReservationItemType.ACTIVITY);
+        var incoming = item(ReservationItemType.ACTIVITY);
+        given(reservationRepo.findByIdForUpdate(reservation.getId())).willReturn(Mono.just(reservation));
+        given(reservationItemRepo.findByReservationId(reservation.getId())).willReturn(Flux.just(existing));
+        given(activityRepo.findById(existing.getItemId()))
+                .willReturn(Mono.just(activity(existing.getItemId(), UUID.randomUUID())));
+        given(activityRepo.findById(incoming.getItemId()))
+                .willReturn(Mono.just(activity(incoming.getItemId(), UUID.randomUUID())));
+
+        StepVerifier.create(addReservationItemsUseCase.handle(reservation.getId(), List.of(incoming)))
+                .expectError(DifferentProvidersInReservationException.class)
+                .verify();
+
+        verify(reservationItemRepo, never()).saveAll(any());
+    }
+
+    private Activity activity(UUID id, UUID guideId) {
+        Instant startsAt = Instant.parse("2026-11-01T10:00:00Z");
+        return Activity.builder()
+                .id(id)
+                .siteId(UUID.randomUUID())
+                .guideId(guideId)
+                .name("City Walking Tour")
+                .category("Tour")
+                .price(ACTIVITY_PRICE)
+                .maxCapacity(20)
+                .durationMinutes(90)
+                .startsAt(startsAt)
+                .endsAt(startsAt.plusSeconds(5400))
                 .build();
     }
 

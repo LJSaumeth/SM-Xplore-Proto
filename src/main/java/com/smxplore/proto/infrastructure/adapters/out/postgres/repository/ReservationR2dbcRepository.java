@@ -16,6 +16,18 @@ public interface ReservationR2dbcRepository extends ReactiveCrudRepository<Reser
 
     Flux<ReservationEntity> findAllByStatus(ReservationStatus status, Pageable pageable);
 
+    Flux<ReservationEntity> findAllByProviderId(UUID providerId, Pageable pageable);
+
+    Flux<ReservationEntity> findAllByProviderIdAndStatus(UUID providerId, ReservationStatus status, Pageable pageable);
+
+    Flux<ReservationEntity> findAllByGuideId(UUID guideId, Pageable pageable);
+
+    Flux<ReservationEntity> findAllByGuideIdAndStatus(UUID guideId, ReservationStatus status, Pageable pageable);
+
+    @Query("SELECT r.* FROM reservations r JOIN reservation_items i ON i.reservation_id = r.id "
+            + "WHERE i.item_id = :itemId AND i.type = :type ORDER BY r.id LIMIT :limit")
+    Flux<ReservationEntity> findAllByItem(UUID itemId, String type, int limit);
+
     @Query("SELECT * FROM reservations WHERE id = :id FOR UPDATE")
     Mono<ReservationEntity> findByIdForUpdate(UUID id);
 }

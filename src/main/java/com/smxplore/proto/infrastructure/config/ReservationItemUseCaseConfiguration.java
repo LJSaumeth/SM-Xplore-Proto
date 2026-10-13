@@ -5,6 +5,7 @@ import com.smxplore.proto.application.reservations.AddReservationItemsUseCase;
 import com.smxplore.proto.application.reservations.ConsultOneReservationItemUseCase;
 import com.smxplore.proto.application.reservations.ConsultReservationItemsByTypeUseCase;
 import com.smxplore.proto.application.reservations.ConsultReservationItemsUseCase;
+import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ReservationItemRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ReservationRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
@@ -25,9 +26,10 @@ public class ReservationItemUseCaseConfiguration {
     public AddReservationItemsUseCasePort addReservationItemsUseCase(ReservationRepositoryPort reservationRepository,
                                                                      ReservationItemRepositoryPort reservationItemRepository,
                                                                      ServiceRepositoryPort serviceRepository,
+                                                                     ActivityRepositoryPort activityRepository,
                                                                      TransactionalOperator transactionalOperator) {
         var useCase = new AddReservationItemsUseCase(
-                reservationRepository, reservationItemRepository, serviceRepository);
+                reservationRepository, reservationItemRepository, serviceRepository, activityRepository);
         return new TransactionalAddReservationItemsUseCase(useCase, transactionalOperator);
     }
 

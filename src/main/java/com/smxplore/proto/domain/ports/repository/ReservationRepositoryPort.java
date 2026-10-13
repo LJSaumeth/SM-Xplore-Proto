@@ -1,6 +1,7 @@
 package com.smxplore.proto.domain.ports.repository;
 
 import com.smxplore.proto.domain.model.reservation.Reservation;
+import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.model.reservation.ReservationStatus;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -22,4 +23,13 @@ public interface ReservationRepositoryPort {
     Flux<Reservation> findAllByTouristId(UUID touristId, int limit);
 
     Flux<Reservation> findAllByStatus(ReservationStatus status, int limit);
+
+    /** Lists the reservations received by a provider; {@code status} is optional (null = any). */
+    Flux<Reservation> findAllByProviderId(UUID providerId, ReservationStatus status, int limit);
+
+    /** Lists the reservations received by a guide; {@code status} is optional (null = any). */
+    Flux<Reservation> findAllByGuideId(UUID guideId, ReservationStatus status, int limit);
+
+    /** Lists the reservations that contain a given event, activity or service. */
+    Flux<Reservation> findAllByItem(UUID itemId, ReservationItemType type, int limit);
 }

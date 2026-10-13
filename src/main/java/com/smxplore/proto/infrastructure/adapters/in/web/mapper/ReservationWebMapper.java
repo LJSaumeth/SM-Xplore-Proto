@@ -13,6 +13,9 @@ public interface ReservationWebMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "bookedAt", ignore = true)
     @Mapping(target = "total", ignore = true)
+    @Mapping(target = "providerId", ignore = true)
+    @Mapping(target = "guideId", ignore = true)
+    @Mapping(target = "code", ignore = true)
     Reservation toDomain(ReservationRequest request);
 
     ReservationResponse toResponse(Reservation reservation);

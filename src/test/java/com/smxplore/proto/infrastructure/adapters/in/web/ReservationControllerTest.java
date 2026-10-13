@@ -4,9 +4,14 @@ import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundExcep
 import com.smxplore.proto.domain.model.reservation.PaymentMethod;
 import com.smxplore.proto.domain.model.reservation.Reservation;
 import com.smxplore.proto.domain.model.reservation.ReservationStatus;
+import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
+import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CancelReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConfirmReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByGuideUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByItemUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByProviderUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByTouristUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CreateReservationUseCasePort;
@@ -35,6 +40,8 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @WebFluxTest(controllers = ReservationController.class)
 @Import({ReservationWebMapperImpl.class, GlobalExceptionHandler.class})
@@ -54,6 +61,21 @@ class ReservationControllerTest {
 
     @MockitoBean
     private ConsultReservationsByTouristUseCasePort consultReservationsByTouristUseCase;
+
+    @MockitoBean
+    private ConsultReservationsByProviderUseCasePort consultReservationsByProviderUseCase;
+
+    @MockitoBean
+    private ConsultReservationsByGuideUseCasePort consultReservationsByGuideUseCase;
+
+    @MockitoBean
+    private ConsultReservationsByItemUseCasePort consultReservationsByItemUseCase;
+
+    @MockitoBean
+    private ServiceRepositoryPort serviceRepository;
+
+    @MockitoBean
+    private ActivityRepositoryPort activityRepository;
 
     @MockitoBean
     private ConfirmReservationUseCasePort confirmReservationUseCase;
@@ -76,7 +98,8 @@ class ReservationControllerTest {
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("tester").claim("role", "ADMIN")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
     }
 
@@ -161,6 +184,43 @@ class ReservationControllerTest {
                 .expectBody()
                 .jsonPath("$.id").isEqualTo(reservation.getId().toString())
                 .jsonPath("$.status").isEqualTo(ReservationStatus.CONFIRMED.name());
+    }
+
+    @Test
+    void createRejectsReservingForAnotherTourist() {
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "TOURIST")));
+
+        client.post().uri("/api/v1/reservations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                          "touristId": "%s",
+                          "numberOfPeople": 2,
+                          "paymentMethod": "CARD",
+                          "bookedFor": "%s"
+                        }
+                        """.formatted(UUID.randomUUID(), Instant.now().plusSeconds(86400)))
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void confirmRejectsWhenTheCallerIsNotTheProviderOrGuide() {
+        var reservation = reservation(ReservationStatus.PENDING).toBuilder()
+                .providerId(UUID.randomUUID())
+                .guideId(UUID.randomUUID())
+                .build();
+        given(consultOneReservationUseCase.handle(reservation.getId())).willReturn(Mono.just(reservation));
+
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "SERVICE_PROVIDER")));
+
+        client.patch().uri("/api/v1/reservations/{reservationId}/confirm", reservation.getId())
+                .exchange()
+                .expectStatus().isForbidden();
+
+        verify(confirmReservationUseCase, never()).handle(any());
     }
 
     private Reservation reservation(ReservationStatus status) {

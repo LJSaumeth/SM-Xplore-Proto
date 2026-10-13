@@ -1,9 +1,19 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
+import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
+import com.smxplore.proto.domain.exceptions.service.ServiceNotFoundException;
+import com.smxplore.proto.domain.model.reservation.Reservation;
+import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.model.reservation.ReservationStatus;
+import com.smxplore.proto.domain.model.user.UserRole;
+import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
+import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CancelReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConfirmReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByGuideUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByItemUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByProviderUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByTouristUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CreateReservationUseCasePort;
@@ -15,11 +25,14 @@ import com.smxplore.proto.infrastructure.adapters.in.web.PaginationLimits;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ReservationWebMapper;
+import com.smxplore.proto.infrastructure.config.JwtConfiguration;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +42,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -44,29 +58,45 @@ public class ReservationController {
     private final ConsultOneReservationUseCasePort consultOneReservationUseCase;
     private final ConsultReservationsByStatusUseCasePort consultReservationsByStatusUseCase;
     private final ConsultReservationsByTouristUseCasePort consultReservationsByTouristUseCase;
+    private final ConsultReservationsByProviderUseCasePort consultReservationsByProviderUseCase;
+    private final ConsultReservationsByGuideUseCasePort consultReservationsByGuideUseCase;
+    private final ConsultReservationsByItemUseCasePort consultReservationsByItemUseCase;
     private final ConfirmReservationUseCasePort confirmReservationUseCase;
     private final RejectReservationUseCasePort rejectReservationUseCase;
     private final CancelReservationUseCasePort cancelReservationUseCase;
     private final RequestReservationCancellationUseCasePort requestReservationCancellationUseCase;
     private final RegisterReservationAttendanceUseCasePort registerReservationAttendanceUseCase;
     private final RegisterReservationNoShowUseCasePort registerReservationNoShowUseCase;
+    private final ServiceRepositoryPort serviceRepository;
+    private final ActivityRepositoryPort activityRepository;
     private final ReservationWebMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a reservation")
-    public Mono<ReservationResponse> create(@Valid @RequestBody ReservationRequest request) {
-        return createReservationUseCase.handle(mapper.toDomain(request)).map(mapper::toResponse);
+    @Operation(summary = "Create a reservation (tourists create their own; admins may book for anyone)")
+    public Mono<ReservationResponse> create(@Valid @RequestBody ReservationRequest request,
+                                            @AuthenticationPrincipal Jwt jwt) {
+        if (!isAdmin(jwt) && !jwt.getSubject().equals(request.touristId().toString())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tourists can only create their own reservations.");
+        }
+        var reservation = mapper.toDomain(request);
+        if (!isAdmin(jwt)) {
+            reservation = reservation.toBuilder().touristId(UUID.fromString(jwt.getSubject())).build();
+        }
+        return createReservationUseCase.handle(reservation).map(mapper::toResponse);
     }
 
     @GetMapping("/{reservationId}")
-    @Operation(summary = "Get one reservation by id")
-    public Mono<ReservationResponse> findOne(@PathVariable UUID reservationId) {
-        return consultOneReservationUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Get one reservation by id (owner, provider, guide or staff)")
+    public Mono<ReservationResponse> findOne(@PathVariable UUID reservationId, @AuthenticationPrincipal Jwt jwt) {
+        return consultOneReservationUseCase.handle(reservationId)
+                .doOnNext(reservation -> requireReservationAccess(jwt, reservation))
+                .map(mapper::toResponse);
     }
 
     @GetMapping
-    @Operation(summary = "List reservations by status")
+    @Operation(summary = "List reservations by status (admin/managers)")
     public Flux<ReservationResponse> findByStatus(@RequestParam ReservationStatus status,
                                                   @RequestParam(defaultValue = "50") int limit) {
         return consultReservationsByStatusUseCase.handle(status, PaginationLimits.clamp(limit))
@@ -74,46 +104,183 @@ public class ReservationController {
     }
 
     @GetMapping("/tourists/{touristId}")
-    @Operation(summary = "List the reservations of a tourist")
+    @Operation(summary = "List the reservations of a tourist (self or staff)")
     public Flux<ReservationResponse> findByTourist(@PathVariable UUID touristId,
-                                                   @RequestParam(defaultValue = "50") int limit) {
+                                                   @RequestParam(defaultValue = "50") int limit,
+                                                   @AuthenticationPrincipal Jwt jwt) {
+        requireSelfOrStaff(jwt, touristId, "You can only list your own reservations.");
         return consultReservationsByTouristUseCase.handle(touristId, PaginationLimits.clamp(limit))
                 .map(mapper::toResponse);
     }
 
+    @GetMapping("/providers/{providerId}")
+    @Operation(summary = "List the reservations received by a provider (self or staff)")
+    public Flux<ReservationResponse> findByProvider(@PathVariable UUID providerId,
+                                                    @RequestParam(required = false) ReservationStatus status,
+                                                    @RequestParam(defaultValue = "50") int limit,
+                                                    @AuthenticationPrincipal Jwt jwt) {
+        requireSelfOrStaff(jwt, providerId, "You can only list your own received reservations.");
+        return consultReservationsByProviderUseCase.handle(providerId, status, PaginationLimits.clamp(limit))
+                .map(mapper::toResponse);
+    }
+
+    @GetMapping("/guides/{guideId}")
+    @Operation(summary = "List the reservations received by a guide (self or staff)")
+    public Flux<ReservationResponse> findByGuide(@PathVariable UUID guideId,
+                                                 @RequestParam(required = false) ReservationStatus status,
+                                                 @RequestParam(defaultValue = "50") int limit,
+                                                 @AuthenticationPrincipal Jwt jwt) {
+        requireSelfOrStaff(jwt, guideId, "You can only list your own received reservations.");
+        return consultReservationsByGuideUseCase.handle(guideId, status, PaginationLimits.clamp(limit))
+                .map(mapper::toResponse);
+    }
+
+    @GetMapping("/by-item")
+    @Operation(summary = "List the reservations that contain a given event, activity or service")
+    public Flux<ReservationResponse> findByItem(@RequestParam ReservationItemType itemType,
+                                                @RequestParam UUID itemId,
+                                                @RequestParam(defaultValue = "50") int limit,
+                                                @AuthenticationPrincipal Jwt jwt) {
+        return requireItemAccess(jwt, itemType, itemId)
+                .thenMany(consultReservationsByItemUseCase.handle(itemId, itemType, PaginationLimits.clamp(limit))
+                        .map(mapper::toResponse));
+    }
+
     @PatchMapping("/{reservationId}/confirm")
-    @Operation(summary = "Confirm a pending reservation")
-    public Mono<ReservationResponse> confirm(@PathVariable UUID reservationId) {
-        return confirmReservationUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Confirm a pending reservation (its provider/guide or staff)")
+    public Mono<ReservationResponse> confirm(@PathVariable UUID reservationId, @AuthenticationPrincipal Jwt jwt) {
+        return requireReservationOperator(jwt, reservationId)
+                .then(Mono.defer(() -> confirmReservationUseCase.handle(reservationId)))
+                .map(mapper::toResponse);
     }
 
     @PatchMapping("/{reservationId}/reject")
-    @Operation(summary = "Reject a pending reservation")
-    public Mono<ReservationResponse> reject(@PathVariable UUID reservationId) {
-        return rejectReservationUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Reject a pending reservation (its provider/guide or staff)")
+    public Mono<ReservationResponse> reject(@PathVariable UUID reservationId, @AuthenticationPrincipal Jwt jwt) {
+        return requireReservationOperator(jwt, reservationId)
+                .then(Mono.defer(() -> rejectReservationUseCase.handle(reservationId)))
+                .map(mapper::toResponse);
     }
 
     @PatchMapping("/{reservationId}/cancel")
-    @Operation(summary = "Cancel a reservation")
-    public Mono<ReservationResponse> cancel(@PathVariable UUID reservationId) {
-        return cancelReservationUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Cancel a reservation (its owner or staff)")
+    public Mono<ReservationResponse> cancel(@PathVariable UUID reservationId, @AuthenticationPrincipal Jwt jwt) {
+        return requireReservationOwnerOrStaff(jwt, reservationId)
+                .then(Mono.defer(() -> cancelReservationUseCase.handle(reservationId)))
+                .map(mapper::toResponse);
     }
 
     @PatchMapping("/{reservationId}/request-cancellation")
-    @Operation(summary = "Request the cancellation of a confirmed reservation")
-    public Mono<ReservationResponse> requestCancellation(@PathVariable UUID reservationId) {
-        return requestReservationCancellationUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Request the cancellation of a confirmed reservation (its owner or staff)")
+    public Mono<ReservationResponse> requestCancellation(@PathVariable UUID reservationId,
+                                                         @AuthenticationPrincipal Jwt jwt) {
+        return requireReservationOwnerOrStaff(jwt, reservationId)
+                .then(Mono.defer(() -> requestReservationCancellationUseCase.handle(reservationId)))
+                .map(mapper::toResponse);
     }
 
     @PatchMapping("/{reservationId}/attendance")
-    @Operation(summary = "Register the attendance to a confirmed reservation")
-    public Mono<ReservationResponse> registerAttendance(@PathVariable UUID reservationId) {
-        return registerReservationAttendanceUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Register the attendance to a confirmed reservation (its provider/guide or staff)")
+    public Mono<ReservationResponse> registerAttendance(@PathVariable UUID reservationId,
+                                                        @AuthenticationPrincipal Jwt jwt) {
+        return requireReservationOperator(jwt, reservationId)
+                .then(Mono.defer(() -> registerReservationAttendanceUseCase.handle(reservationId)))
+                .map(mapper::toResponse);
     }
 
     @PatchMapping("/{reservationId}/no-show")
-    @Operation(summary = "Register the no show of a confirmed reservation")
-    public Mono<ReservationResponse> registerNoShow(@PathVariable UUID reservationId) {
-        return registerReservationNoShowUseCase.handle(reservationId).map(mapper::toResponse);
+    @Operation(summary = "Register the no show of a confirmed reservation (its provider/guide or staff)")
+    public Mono<ReservationResponse> registerNoShow(@PathVariable UUID reservationId,
+                                                    @AuthenticationPrincipal Jwt jwt) {
+        return requireReservationOperator(jwt, reservationId)
+                .then(Mono.defer(() -> registerReservationNoShowUseCase.handle(reservationId)))
+                .map(mapper::toResponse);
+    }
+
+    private static boolean isAdmin(Jwt jwt) {
+        return UserRole.ADMIN.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
+    }
+
+    private static boolean isAdminOrManager(Jwt jwt) {
+        var role = jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM);
+        return UserRole.ADMIN.name().equals(role) || UserRole.DESTINATION_MANAGER.name().equals(role);
+    }
+
+    private static void requireSelfOrStaff(Jwt jwt, UUID userId, String message) {
+        if (!isAdminOrManager(jwt) && !userId.toString().equals(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, message);
+        }
+    }
+
+    private static void requireReservationAccess(Jwt jwt, Reservation reservation) {
+        if (isAdminOrManager(jwt)) {
+            return;
+        }
+        var subject = jwt.getSubject();
+        var isOwner = reservation.getTouristId() != null && reservation.getTouristId().toString().equals(subject);
+        var isProvider = reservation.getProviderId() != null && reservation.getProviderId().toString().equals(subject);
+        var isGuide = reservation.getGuideId() != null && reservation.getGuideId().toString().equals(subject);
+        if (!isOwner && !isProvider && !isGuide) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot access this reservation.");
+        }
+    }
+
+    private Mono<Void> requireReservationOperator(Jwt jwt, UUID reservationId) {
+        if (isAdminOrManager(jwt)) {
+            return Mono.empty();
+        }
+        return consultOneReservationUseCase.handle(reservationId)
+                .doOnNext(reservation -> {
+                    var subject = jwt.getSubject();
+                    var isProvider = reservation.getProviderId() != null
+                            && reservation.getProviderId().toString().equals(subject);
+                    var isGuide = reservation.getGuideId() != null
+                            && reservation.getGuideId().toString().equals(subject);
+                    if (!isProvider && !isGuide) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "Only the provider or guide of the reservation can operate it.");
+                    }
+                })
+                .then();
+    }
+
+    private Mono<Void> requireReservationOwnerOrStaff(Jwt jwt, UUID reservationId) {
+        if (isAdminOrManager(jwt)) {
+            return Mono.empty();
+        }
+        return consultOneReservationUseCase.handle(reservationId)
+                .doOnNext(reservation -> {
+                    if (reservation.getTouristId() == null
+                            || !reservation.getTouristId().toString().equals(jwt.getSubject())) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "Only the owner of the reservation can cancel it.");
+                    }
+                })
+                .then();
+    }
+
+    private Mono<Void> requireItemAccess(Jwt jwt, ReservationItemType itemType, UUID itemId) {
+        if (isAdminOrManager(jwt)) {
+            return Mono.empty();
+        }
+        var subject = jwt.getSubject();
+        return switch (itemType) {
+            case SERVICE -> serviceRepository.findById(itemId)
+                    .switchIfEmpty(Mono.error(new ServiceNotFoundException(itemId)))
+                    .filter(service -> service.getProvider() != null
+                            && service.getProvider().id().toString().equals(subject))
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "You can only list reservations of your own services.")))
+                    .then();
+            case ACTIVITY -> activityRepository.findById(itemId)
+                    .switchIfEmpty(Mono.error(new ActivityNotFoundException(itemId)))
+                    .filter(activity -> activity.getGuideId() != null
+                            && activity.getGuideId().toString().equals(subject))
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "You can only list reservations of your own activities.")))
+                    .then();
+            case EVENT -> Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only administrators can list reservations of an event."));
+        };
     }
 }

@@ -8,6 +8,7 @@ import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.GuideProfileResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.SiteResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
@@ -831,6 +832,73 @@ class SecurityIntegrationTest {
                         """)
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void reservationOwnershipIsEnforced() {
+        var tourist = tourist();
+        var otherTourist = tourist();
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        // tourists can only create their own reservations
+        webTestClient.post().uri("/api/v1/reservations")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"touristId": "%s", "numberOfPeople": 2, "paymentMethod": "CARD",
+                         "bookedFor": "2027-01-01T10:00:00Z"}
+                        """.formatted(otherTourist.id()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var reservation = webTestClient.post().uri("/api/v1/reservations")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"touristId": "%s", "numberOfPeople": 2, "paymentMethod": "CARD",
+                         "bookedFor": "2027-01-01T10:00:00Z"}
+                        """.formatted(tourist.id()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ReservationResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(reservation).isNotNull();
+        assertThat(reservation.code()).startsWith("R-");
+        var reservationId = reservation.id();
+
+        // the owner and the staff can read it; another tourist cannot
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}", reservationId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}", reservationId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}", reservationId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // the by-status listing is staff-only now
+        webTestClient.get().uri("/api/v1/reservations?status=PENDING")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get().uri("/api/v1/reservations?status=PENDING")
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        // another tourist cannot list this tourist's reservations
+        webTestClient.get().uri("/api/v1/reservations/tourists/{touristId}", tourist.id())
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
     }
 
     @Test

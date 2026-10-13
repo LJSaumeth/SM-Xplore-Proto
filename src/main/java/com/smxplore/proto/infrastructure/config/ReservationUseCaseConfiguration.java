@@ -3,6 +3,9 @@ package com.smxplore.proto.infrastructure.config;
 import com.smxplore.proto.application.reservations.CancelReservationUseCase;
 import com.smxplore.proto.application.reservations.ConfirmReservationUseCase;
 import com.smxplore.proto.application.reservations.ConsultOneReservationUseCase;
+import com.smxplore.proto.application.reservations.ConsultReservationsByGuideUseCase;
+import com.smxplore.proto.application.reservations.ConsultReservationsByItemUseCase;
+import com.smxplore.proto.application.reservations.ConsultReservationsByProviderUseCase;
 import com.smxplore.proto.application.reservations.ConsultReservationsByStatusUseCase;
 import com.smxplore.proto.application.reservations.ConsultReservationsByTouristUseCase;
 import com.smxplore.proto.application.reservations.CreateReservationUseCase;
@@ -14,6 +17,9 @@ import com.smxplore.proto.domain.ports.repository.ReservationRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CancelReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConfirmReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByGuideUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByItemUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByProviderUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationsByTouristUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CreateReservationUseCasePort;
@@ -53,6 +59,24 @@ public class ReservationUseCaseConfiguration {
     public ConsultReservationsByTouristUseCasePort consultReservationsByTouristUseCase(
             ReservationRepositoryPort reservationRepository) {
         return new ConsultReservationsByTouristUseCase(reservationRepository);
+    }
+
+    @Bean
+    public ConsultReservationsByProviderUseCasePort consultReservationsByProviderUseCase(
+            ReservationRepositoryPort reservationRepository) {
+        return new ConsultReservationsByProviderUseCase(reservationRepository);
+    }
+
+    @Bean
+    public ConsultReservationsByGuideUseCasePort consultReservationsByGuideUseCase(
+            ReservationRepositoryPort reservationRepository) {
+        return new ConsultReservationsByGuideUseCase(reservationRepository);
+    }
+
+    @Bean
+    public ConsultReservationsByItemUseCasePort consultReservationsByItemUseCase(
+            ReservationRepositoryPort reservationRepository) {
+        return new ConsultReservationsByItemUseCase(reservationRepository);
     }
 
     @Bean

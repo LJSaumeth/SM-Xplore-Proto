@@ -98,18 +98,24 @@ public class SecurityConfiguration {
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
                         .pathMatchers(HttpMethod.POST, "/api/v1/security-reports/*/close")
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
-                        // Reservations: tourists create and cancel; providers/managers operate them
+                        // Reservations: tourists create and cancel; providers/guides/managers operate them
                         .pathMatchers(HttpMethod.POST, "/api/v1/reservations", "/api/v1/reservations/*/items",
                                 "/api/v1/reservations/*/items/batch")
                         .hasAnyRole(UserRole.TOURIST.name(), UserRole.ADMIN.name())
+                        .pathMatchers(HttpMethod.GET, "/api/v1/reservations")
+                        .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
+                        .pathMatchers(HttpMethod.GET, "/api/v1/reservations/providers/*",
+                                "/api/v1/reservations/guides/*", "/api/v1/reservations/by-item")
+                        .hasAnyRole(UserRole.SERVICE_PROVIDER.name(), UserRole.GUIDE.name(), UserRole.ADMIN.name(),
+                                UserRole.DESTINATION_MANAGER.name())
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/reservations/*/cancel",
                                 "/api/v1/reservations/*/request-cancellation")
                         .hasAnyRole(UserRole.TOURIST.name(), UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/reservations/*/confirm",
                                 "/api/v1/reservations/*/reject", "/api/v1/reservations/*/attendance",
                                 "/api/v1/reservations/*/no-show")
-                        .hasAnyRole(UserRole.SERVICE_PROVIDER.name(), UserRole.DESTINATION_MANAGER.name(),
-                                UserRole.ADMIN.name())
+                        .hasAnyRole(UserRole.SERVICE_PROVIDER.name(), UserRole.GUIDE.name(),
+                                UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
                         // User administration: admins only — own profile/account endpoints are guarded in the controller
                         .pathMatchers(HttpMethod.GET, "/api/v1/users", "/api/v1/users/search")
                         .hasRole(UserRole.ADMIN.name())
