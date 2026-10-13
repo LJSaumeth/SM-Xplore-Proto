@@ -10,13 +10,12 @@ import java.util.Collection;
 import java.util.UUID;
 
 /**
- * Envuelve el caso de uso en una transacción de R2DBC: el guardado de los
- * items y la actualización del total de la reserva ocurren de forma atómica
- * (si algo falla, no queda nada a medias). Además los items solo se emiten
- * después de que el commit fue exitoso.
+ * Wraps the use case in an R2DBC transaction: saving the items and updating the
+ * reservation total happen atomically (a failure leaves nothing half-done).
+ * Items are only emitted after the commit succeeded.
  * <p>
- * Se implementa como decorador en infraestructura para que el caso de uso
- * (capa de aplicación) siga sin depender de Spring.
+ * It is implemented as an infrastructure decorator so the use case (application
+ * layer) keeps not depending on Spring.
  */
 @RequiredArgsConstructor
 public class TransactionalAddReservationItemsUseCase implements AddReservationItemsUseCasePort {
@@ -26,8 +25,8 @@ public class TransactionalAddReservationItemsUseCase implements AddReservationIt
 
     @Override
     public Flux<ReservationItem> handle(UUID reservationId, Collection<ReservationItem> items) {
-        // collectList() dentro de la transacción: los items se emiten recién
-        // cuando el commit fue exitoso (el cliente nunca ve resultados a medias)
+        // collectList() inside the transaction: items are emitted only after the
+        // commit succeeded (the client never sees half-done results)
         return transactionalOperator.transactional(delegate.handle(reservationId, items).collectList())
                 .flatMapMany(Flux::fromIterable);
     }

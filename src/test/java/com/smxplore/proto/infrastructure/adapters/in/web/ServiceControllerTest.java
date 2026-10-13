@@ -37,6 +37,8 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @WebFluxTest(controllers = ServiceController.class)
 @Import({ServiceWebMapperImpl.class, GlobalExceptionHandler.class})
@@ -108,6 +110,8 @@ class ServiceControllerTest {
                         """)
                 .exchange()
                 .expectStatus().isForbidden();
+
+        verify(changeServicePriceUseCase, never()).handle(any(), any());
     }
 
     @Test

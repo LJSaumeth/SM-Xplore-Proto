@@ -33,9 +33,9 @@ import java.util.List;
  * activities, providers manage services, tourists operate on their own
  * reservations, admins administer users and see everything).
  *
- * <p>Note: this chain enforces roles, not resource ownership. Ownership checks
- * (self-or-admin) exist today for the user profile endpoints; the remaining
- * ownership gaps are tracked in the README ("Security notes").
+ * <p>Note: this chain enforces roles; resource ownership (owner/provider/guide/
+ * staff scoping) is enforced in the web controllers. See the README
+ * ("Security notes") for the details.
  */
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfiguration {
@@ -102,9 +102,12 @@ public class SecurityConfiguration {
                                 "/api/v1/security-reports/*/solve")
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
                         // Reservations: tourists create and cancel; providers/guides/managers operate them
-                        .pathMatchers(HttpMethod.POST, "/api/v1/reservations", "/api/v1/reservations/*/items",
-                                "/api/v1/reservations/*/items/batch")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/reservations")
                         .hasAnyRole(UserRole.TOURIST.name(), UserRole.ADMIN.name())
+                        .pathMatchers(HttpMethod.POST, "/api/v1/reservations/*/items",
+                                "/api/v1/reservations/*/items/batch")
+                        .hasAnyRole(UserRole.TOURIST.name(), UserRole.ADMIN.name(),
+                                UserRole.DESTINATION_MANAGER.name())
                         .pathMatchers(HttpMethod.GET, "/api/v1/reservations")
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
                         .pathMatchers(HttpMethod.HEAD, "/api/v1/reservations")

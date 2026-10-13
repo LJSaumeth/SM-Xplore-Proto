@@ -11,8 +11,8 @@ import java.util.Collections;
 import java.util.UUID;
 
 /**
- * Agregar un item es agregar una colección de un solo item, así que todas las
- * validaciones viven en {@link AddReservationItemsUseCase}.
+ * Adding one item is adding a single-item collection, so every validation lives
+ * in {@link AddReservationItemsUseCase}.
  */
 @RequiredArgsConstructor
 public class AddReservationItemUseCase implements AddReservationItemUseCasePort {

@@ -31,7 +31,8 @@ All endpoints require a **JWT Bearer token** except the public surface:
 `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/recover-password`,
 `/actuator/health`, the Swagger UI / docs paths, the **public catalog**
 (`GET` of `/api/v1/events`, `/api/v1/activities`, `/api/v1/services`,
-`/api/v1/zones` and `/api/v1/sites`) and the **public profiles**
+`/api/v1/zones` and `/api/v1/sites` — anonymous callers only see **published**
+events/activities) and the **public profiles**
 (`GET /api/v1/users/guides/{id}` and `/api/v1/users/providers/{id}` — contact
 data is only included for authenticated callers).
 

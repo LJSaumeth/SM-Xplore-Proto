@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web;
 
 import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundException;
+import com.smxplore.proto.domain.model.activity.Activity;
 import com.smxplore.proto.domain.model.reservation.PaymentMethod;
 import com.smxplore.proto.domain.model.reservation.Reservation;
 import com.smxplore.proto.domain.model.reservation.ReservationItemType;
@@ -252,6 +253,51 @@ class ReservationControllerTest {
                         .build())
                 .exchange()
                 .expectStatus().isForbidden();
+
+        verify(consultReservationsByItemUseCase, never()).handle(any(), any(), anyInt());
+    }
+
+    @Test
+    void findByItemRejectsEventsForProviders() {
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "SERVICE_PROVIDER")));
+
+        client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/reservations/by-item")
+                        .queryParam("itemType", "EVENT")
+                        .queryParam("itemId", UUID.randomUUID())
+                        .build())
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void findByItemIsAllowedForTheOwningGuide() {
+        var guideId = UUID.randomUUID();
+        var startsAt = Instant.now().plusSeconds(86400);
+        var activity = Activity.builder()
+                .id(UUID.randomUUID())
+                .siteId(UUID.randomUUID())
+                .guideId(guideId)
+                .name("City Walking Tour")
+                .category("Tour")
+                .price(new BigDecimal("80000.00"))
+                .maxCapacity(20)
+                .durationMinutes(90)
+                .startsAt(startsAt)
+                .endsAt(startsAt.plusSeconds(5400))
+                .build();
+        given(activityRepository.findById(activity.getId())).willReturn(Mono.just(activity));
+        given(consultReservationsByItemUseCase.handle(any(), any(), anyInt())).willReturn(Flux.empty());
+
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(guideId.toString()).claim("role", "GUIDE")));
+
+        client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/reservations/by-item")
+                        .queryParam("itemType", "ACTIVITY")
+                        .queryParam("itemId", activity.getId())
+                        .build())
+                .exchange()
+                .expectStatus().isOk();
     }
 
     @Test

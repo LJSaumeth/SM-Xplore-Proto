@@ -28,9 +28,9 @@ public class ReservationPostgresAdapter implements ReservationRepositoryPort {
     private final ReservationPersistenceMapper mapper;
 
     /**
-     * Los ids se generan en el dominio, por lo que el save() de Spring Data no
-     * puede decidir entre insert y update con isNew() (haría siempre update).
-     * Aquí se consulta la existencia y se hace el upsert explícito.
+     * Ids are generated in the domain, so Spring Data's save() cannot decide
+     * between insert and update with isNew() (it would always update). Here the
+     * existence is checked and the upsert is explicit.
      */
     @Override
     public Mono<Reservation> save(Reservation reservation) {

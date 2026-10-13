@@ -1,6 +1,5 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
-import com.smxplore.proto.domain.exceptions.reservation.ReservationItemNotFoundException;
 import com.smxplore.proto.domain.model.reservation.Reservation;
 import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.model.user.UserRole;

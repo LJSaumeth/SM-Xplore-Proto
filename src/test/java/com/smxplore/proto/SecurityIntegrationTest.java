@@ -7,6 +7,8 @@ import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
+import com.smxplore.proto.domain.model.securityreport.SecurityReportStatus;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ActivityResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.EventResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.GuideProfileResponse;
@@ -947,6 +949,16 @@ class SecurityIntegrationTest {
                 .exchange()
                 .expectStatus().isNotFound();
 
+        // the draft is filtered out of the anonymous listing
+        var anonymousList = webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(EventResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(anonymousList).isNotNull();
+        assertThat(anonymousList).noneMatch(item -> eventId.equals(item.id()));
+
         // after publishing it becomes visible
         webTestClient.patch().uri("/api/v1/events/{eventId}/status", eventId)
                 .headers(h -> h.setBearerAuth(manager))
@@ -958,6 +970,49 @@ class SecurityIntegrationTest {
                 .expectStatus().isOk();
 
         webTestClient.get().uri("/api/v1/events/{eventId}", eventId)
+                .exchange()
+                .expectStatus().isOk();
+
+        var publishedList = webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(EventResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(publishedList).isNotNull();
+        assertThat(publishedList).anyMatch(item -> eventId.equals(item.id()));
+
+        // draft activities are hidden from anonymous callers too
+        var activity = webTestClient.post().uri("/api/v1/activities")
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"siteId": "%s", "name": "Draft Activity", "category": "Tour", "price": 1000.00,
+                         "maxCapacity": 10, "durationMinutes": 60, "startsAt": "2026-12-03T10:00:00Z",
+                         "endsAt": "2026-12-03T11:00:00Z"}
+                        """.formatted(UUID.randomUUID()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ActivityResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(activity).isNotNull();
+        var activityId = activity.id();
+
+        webTestClient.get().uri("/api/v1/activities/{activityId}", activityId)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        webTestClient.patch().uri("/api/v1/activities/{activityId}/status", activityId)
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/activities/{activityId}", activityId)
                 .exchange()
                 .expectStatus().isOk();
 
@@ -984,6 +1039,7 @@ class SecurityIntegrationTest {
     @Test
     void reportSolveIsStaffOnlyAndReporterComesFromTheToken() {
         var tourist = tourist();
+        var otherTourist = tourist();
         var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
 
         var report = webTestClient.post().uri("/api/v1/security-reports")
@@ -998,17 +1054,44 @@ class SecurityIntegrationTest {
                 .returnResult()
                 .getResponseBody();
         assertThat(report).isNotNull();
+        assertThat(report.user()).isNotNull();
+        assertThat(report.user().id()).isEqualTo(tourist.id());
         var reportId = report.id();
 
+        // only the author (or staff) can change the report
+        webTestClient.patch().uri("/api/v1/security-reports/{reportId}/text", reportId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"text": "Cambio ajeno"}
+                        """)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.patch().uri("/api/v1/security-reports/{reportId}/text", reportId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"text": "Cambio propio"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+
+        // solving is staff-only
         webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
                 .headers(h -> h.setBearerAuth(tourist.token()))
                 .exchange()
                 .expectStatus().isForbidden();
 
-        webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
+        var solved = webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectBody(SecurityReportResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(solved).isNotNull();
+        assertThat(solved.status()).isEqualTo(SecurityReportStatus.SOLVED);
     }
 
     @Test
