@@ -1,7 +1,10 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
+import com.smxplore.proto.domain.exceptions.service.ServiceNotFoundException;
 import com.smxplore.proto.domain.model.service.ServiceStatus;
 import com.smxplore.proto.domain.model.service.ServiceType;
+import com.smxplore.proto.domain.model.user.UserRole;
+import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.service.AddAttributeToServiceUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.service.AddServicePhotosUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.service.ChangeServicePriceUseCasePort;
@@ -18,11 +21,14 @@ import com.smxplore.proto.infrastructure.adapters.in.web.dto.PhotosRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ServiceWebMapper;
+import com.smxplore.proto.infrastructure.config.JwtConfiguration;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -54,12 +61,21 @@ public class ServiceController {
     private final MarkServiceAsUnavailableUseCasePort markServiceAsUnavailableUseCase;
     private final AddServicePhotosUseCasePort addServicePhotosUseCase;
     private final AddAttributeToServiceUseCasePort addAttributeToServiceUseCase;
+    private final ServiceRepositoryPort serviceRepository;
     private final ServiceWebMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Register a service for a provider")
-    public Mono<ServiceResponse> register(@Valid @RequestBody ServiceRequest request) {
+    @Operation(summary = "Register a service for a provider (providers register their own)")
+    public Mono<ServiceResponse> register(@Valid @RequestBody ServiceRequest request,
+                                          @AuthenticationPrincipal Jwt jwt) {
+        if (!isAdmin(jwt)) {
+            var providerId = request.provider().id();
+            if (providerId == null || !providerId.toString().equals(jwt.getSubject())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Providers can only register services for themselves.");
+            }
+        }
         var provider = mapper.toDomain(request.provider());
         return registerServiceUseCase.handle(provider, mapper.toDomain(request))
                 .map(mapper::toResponse);
@@ -91,36 +107,69 @@ public class ServiceController {
     }
 
     @PatchMapping("/{serviceId}/price")
-    @Operation(summary = "Change the price of a service")
+    @Operation(summary = "Change the price of a service (its provider)")
     public Mono<ServiceResponse> changePrice(@PathVariable UUID serviceId,
-                                             @Valid @RequestBody ChangePriceRequest request) {
-        return changeServicePriceUseCase.handle(serviceId, request.price()).map(mapper::toResponse);
+                                             @Valid @RequestBody ChangePriceRequest request,
+                                             @AuthenticationPrincipal Jwt jwt) {
+        return requireServiceAccess(jwt, serviceId)
+                .then(Mono.defer(() -> changeServicePriceUseCase.handle(serviceId, request.price())))
+                .map(mapper::toResponse);
     }
 
     @PutMapping("/{serviceId}/available")
-    @Operation(summary = "Mark a service as available")
-    public Mono<ServiceResponse> markAsAvailable(@PathVariable UUID serviceId) {
-        return markServiceAsAvailableUseCase.handle(serviceId).map(mapper::toResponse);
+    @Operation(summary = "Mark a service as available (its provider)")
+    public Mono<ServiceResponse> markAsAvailable(@PathVariable UUID serviceId, @AuthenticationPrincipal Jwt jwt) {
+        return requireServiceAccess(jwt, serviceId)
+                .then(Mono.defer(() -> markServiceAsAvailableUseCase.handle(serviceId)))
+                .map(mapper::toResponse);
     }
 
     @PutMapping("/{serviceId}/unavailable")
-    @Operation(summary = "Mark a service as unavailable")
-    public Mono<ServiceResponse> markAsUnavailable(@PathVariable UUID serviceId) {
-        return markServiceAsUnavailableUseCase.handle(serviceId).map(mapper::toResponse);
+    @Operation(summary = "Mark a service as unavailable (its provider)")
+    public Mono<ServiceResponse> markAsUnavailable(@PathVariable UUID serviceId, @AuthenticationPrincipal Jwt jwt) {
+        return requireServiceAccess(jwt, serviceId)
+                .then(Mono.defer(() -> markServiceAsUnavailableUseCase.handle(serviceId)))
+                .map(mapper::toResponse);
     }
 
     @PostMapping("/{serviceId}/photos")
-    @Operation(summary = "Add photos to a service")
+    @Operation(summary = "Add photos to a service (its provider)")
     public Mono<ServiceResponse> addPhotos(@PathVariable UUID serviceId,
-                                           @Valid @RequestBody PhotosRequest request) {
-        return addServicePhotosUseCase.handle(serviceId, request.photosUrls()).map(mapper::toResponse);
+                                           @Valid @RequestBody PhotosRequest request,
+                                           @AuthenticationPrincipal Jwt jwt) {
+        return requireServiceAccess(jwt, serviceId)
+                .then(Mono.defer(() -> addServicePhotosUseCase.handle(serviceId, request.photosUrls())))
+                .map(mapper::toResponse);
     }
 
     @PostMapping("/{serviceId}/attributes")
-    @Operation(summary = "Add extra attributes to a service")
+    @Operation(summary = "Add extra attributes to a service (its provider)")
     public Mono<ServiceResponse> addAttributes(@PathVariable UUID serviceId,
-                                               @Valid @RequestBody AddAttributesRequest request) {
-        return addAttributeToServiceUseCase.handle(serviceId, mapper.toAttributeList(request.attributes()))
+                                               @Valid @RequestBody AddAttributesRequest request,
+                                               @AuthenticationPrincipal Jwt jwt) {
+        return requireServiceAccess(jwt, serviceId)
+                .then(Mono.defer(() -> addAttributeToServiceUseCase.handle(serviceId,
+                        mapper.toAttributeList(request.attributes()))))
                 .map(mapper::toResponse);
+    }
+
+    private static boolean isAdmin(Jwt jwt) {
+        return UserRole.ADMIN.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
+    }
+
+    private Mono<Void> requireServiceAccess(Jwt jwt, UUID serviceId) {
+        if (isAdmin(jwt)) {
+            return Mono.empty();
+        }
+        return serviceRepository.findById(serviceId)
+                .switchIfEmpty(Mono.error(new ServiceNotFoundException(serviceId)))
+                .doOnNext(service -> {
+                    if (service.getProvider() == null
+                            || !service.getProvider().id().toString().equals(jwt.getSubject())) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "Providers can only manage their own services.");
+                    }
+                })
+                .then();
     }
 }

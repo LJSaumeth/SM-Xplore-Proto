@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
 import com.smxplore.proto.domain.model.securityreport.SecurityReportStatus;
+import com.smxplore.proto.domain.model.types.UserRef;
 import com.smxplore.proto.domain.ports.usecases.securityreport.AddReportPhotosUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ChangeReportTextUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.CloseReportUseCasePort;
@@ -9,6 +10,7 @@ import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultOneReportU
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportCommentsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportsByUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportsUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.securityreport.MarkReportAsSolvedUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ReportIncidentUseCasePort;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ChangeReportTextRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.CommentRequest;
@@ -22,6 +24,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,16 +53,19 @@ public class SecurityReportController {
     private final ChangeReportTextUseCasePort changeReportTextUseCase;
     private final AddReportPhotosUseCasePort addReportPhotosUseCase;
     private final CloseReportUseCasePort closeReportUseCase;
+    private final MarkReportAsSolvedUseCasePort markReportAsSolvedUseCase;
     private final CommentReportUseCasePort commentReportUseCase;
     private final ConsultReportCommentsUseCasePort consultReportCommentsUseCase;
     private final SecurityReportWebMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Report a security incident")
-    public Mono<SecurityReportResponse> reportIncident(@Valid @RequestBody SecurityReportRequest request) {
-        var securityReport = mapper.toDomain(request);
-        return reportIncidentUseCase.handle(securityReport.getUser(), securityReport)
+    @Operation(summary = "Report a security incident (the reporter is taken from the token)")
+    public Mono<SecurityReportResponse> reportIncident(@Valid @RequestBody SecurityReportRequest request,
+                                                       @AuthenticationPrincipal Jwt jwt) {
+        var user = new UserRef(UUID.fromString(jwt.getSubject()), jwt.getClaimAsString("name"));
+        var securityReport = mapper.toDomain(request).toBuilder().user(user).build();
+        return reportIncidentUseCase.handle(user, securityReport)
                 .map(mapper::toResponse);
     }
 
@@ -100,12 +107,20 @@ public class SecurityReportController {
         return closeReportUseCase.handle(reportId).map(mapper::toResponse);
     }
 
+    @PostMapping("/{reportId}/solve")
+    @Operation(summary = "Mark a security report as solved")
+    public Mono<SecurityReportResponse> solve(@PathVariable UUID reportId) {
+        return markReportAsSolvedUseCase.handle(reportId).map(mapper::toResponse);
+    }
+
     @PostMapping("/{reportId}/comments")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Comment a security report")
+    @Operation(summary = "Comment a security report (the author is taken from the token)")
     public Mono<CommentResponse> comment(@PathVariable UUID reportId,
-                                         @Valid @RequestBody CommentRequest request) {
-        var comment = mapper.toDomain(request).toBuilder().reportId(reportId).build();
+                                         @Valid @RequestBody CommentRequest request,
+                                         @AuthenticationPrincipal Jwt jwt) {
+        var user = new UserRef(UUID.fromString(jwt.getSubject()), jwt.getClaimAsString("name"));
+        var comment = mapper.toDomain(request).toBuilder().reportId(reportId).user(user).build();
         return commentReportUseCase.handle(comment).map(mapper::toResponse);
     }
 

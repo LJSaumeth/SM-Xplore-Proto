@@ -17,6 +17,7 @@ import com.smxplore.proto.domain.ports.usecases.service.FindServicesByTypeUseCas
 import com.smxplore.proto.domain.ports.usecases.service.MarkServiceAsAvailableUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.service.MarkServiceAsUnavailableUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.service.RegisterServiceUseCasePort;
+import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.controller.ServiceController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ServiceWebMapperImpl;
@@ -74,10 +75,14 @@ class ServiceControllerTest {
     @MockitoBean
     private AddAttributeToServiceUseCasePort addAttributeToServiceUseCase;
 
+    @MockitoBean
+    private ServiceRepositoryPort serviceRepository;
+
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("tester").claim("role", "ADMIN")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
     }
 

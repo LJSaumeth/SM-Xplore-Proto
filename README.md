@@ -60,10 +60,12 @@ data is only included for authenticated callers).
 
 ### Security notes / known gaps
 
-- The chain enforces **roles, not resource ownership**, except for the profile
-  endpoints (`GET`/`PUT`/`DELETE /api/v1/users/{id}` are self-or-admin). Cross-user
-  ownership checks for reservations, services and security reports are pending —
-  tracked as follow-ups with each module owner.
+- The chain enforces **roles**; **resource ownership** is enforced in the
+  controllers: `GET`/`PUT`/`DELETE /api/v1/users/{id}` and `GET /reservations/{id}`
+  are owner-or-staff, reservations can only be created/cancelled by their owner,
+  `confirm`/`reject`/`attendance`/`no-show` belong to the reservation's provider or
+  guide, activities belong to their guide, services to their provider, and the
+  reporter/commenter of a security report comes from the token (never the body).
 - Public profiles (`GET /api/v1/users/guides/{id}`, `/users/providers/{id}`) only
   expose active (approved) accounts; email/phone are returned to authenticated
   callers only (anonymous requests get them as `null`).
@@ -74,6 +76,10 @@ data is only included for authenticated callers).
   admin with `PATCH /api/v1/users/{id}/status` (`ACTIVE`). Pending (`INACTIVE`)
   accounts cannot be activated directly — they must go through the `approve-*`
   endpoints, and a provider can only log in once its registration is `APPROVED`.
+- New in this branch: **sites & zones** (zones in PostgreSQL, sites in MongoDB — public
+  reads, `DESTINATION_MANAGER`/`ADMIN` management), **catalog filters** by site/zone,
+  **event editing** (`PUT /events/{id}`), **reservations by provider/guide/item** plus a
+  readable code (`R-####`), and **solved reports** (`POST /security-reports/{id}/solve`).
 - No refresh tokens and no revocation: a token stays valid until `exp`
   (60 minutes by default, `JWT_EXPIRATION_MINUTES`); blocking a user does not
   invalidate tokens already issued.

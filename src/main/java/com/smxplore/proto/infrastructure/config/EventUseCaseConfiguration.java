@@ -7,6 +7,7 @@ import com.smxplore.proto.application.events.FindEventsBySiteUseCase;
 import com.smxplore.proto.application.events.FindEventsByZoneUseCase;
 import com.smxplore.proto.application.events.RegisterEventUseCase;
 import com.smxplore.proto.application.events.SearchEventsUseCase;
+import com.smxplore.proto.application.events.UpdateEventUseCase;
 import com.smxplore.proto.application.events.ViewEventDetailsUseCase;
 import com.smxplore.proto.domain.ports.repository.EventRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ISiteRepository;
@@ -17,6 +18,7 @@ import com.smxplore.proto.domain.ports.usecases.event.FindEventsBySiteUseCasePor
 import com.smxplore.proto.domain.ports.usecases.event.FindEventsByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.RegisterEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.SearchEventsUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.UpdateEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ViewEventDetailsUseCasePort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,6 +55,11 @@ public class EventUseCaseConfiguration {
     public FindEventsByZoneUseCasePort findEventsByZoneUseCase(EventRepositoryPort eventRepository,
                                                                ISiteRepository siteRepository) {
         return new FindEventsByZoneUseCase(eventRepository, siteRepository);
+    }
+
+    @Bean
+    public UpdateEventUseCasePort updateEventUseCase(EventRepositoryPort eventRepository) {
+        return new UpdateEventUseCase(eventRepository);
     }
 
     @Bean

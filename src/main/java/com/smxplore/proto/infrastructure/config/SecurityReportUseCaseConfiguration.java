@@ -8,6 +8,7 @@ import com.smxplore.proto.application.securityreports.ConsultOneReportUseCase;
 import com.smxplore.proto.application.securityreports.ConsultReportCommentUseCase;
 import com.smxplore.proto.application.securityreports.ConsultReportsByUserUseCase;
 import com.smxplore.proto.application.securityreports.ConsultReportsUseCase;
+import com.smxplore.proto.application.securityreports.MarkReportAsSolvedUseCase;
 import com.smxplore.proto.application.securityreports.ReportIncidentUseCase;
 import com.smxplore.proto.domain.ports.repository.CommentRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.SecurityReportRepositoryPort;
@@ -19,6 +20,7 @@ import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultOneReportU
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportCommentsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportsByUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportsUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.securityreport.MarkReportAsSolvedUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ReportIncidentUseCasePort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -59,6 +61,11 @@ public class SecurityReportUseCaseConfiguration {
     @Bean
     public CloseReportUseCasePort closeReportUseCase(SecurityReportRepositoryPort securityReportRepository) {
         return new CloseReportUseCase(securityReportRepository);
+    }
+
+    @Bean
+    public MarkReportAsSolvedUseCasePort markReportAsSolvedUseCase(SecurityReportRepositoryPort securityReportRepository) {
+        return new MarkReportAsSolvedUseCase(securityReportRepository);
     }
 
     @Bean

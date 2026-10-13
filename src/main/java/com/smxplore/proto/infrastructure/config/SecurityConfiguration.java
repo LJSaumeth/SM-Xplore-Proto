@@ -72,6 +72,8 @@ public class SecurityConfiguration {
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/events/*/status", "/api/v1/events/*/attendance")
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
+                        .pathMatchers(HttpMethod.PUT, "/api/v1/events/*")
+                        .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
                         // Sites & zones: reads are public (catalog above); management is manager/admin
                         .pathMatchers(HttpMethod.POST, "/api/v1/zones", "/api/v1/sites")
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
@@ -96,7 +98,8 @@ public class SecurityConfiguration {
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
                         .pathMatchers(HttpMethod.HEAD, "/api/v1/security-reports")
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
-                        .pathMatchers(HttpMethod.POST, "/api/v1/security-reports/*/close")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/security-reports/*/close",
+                                "/api/v1/security-reports/*/solve")
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
                         // Reservations: tourists create and cancel; providers/guides/managers operate them
                         .pathMatchers(HttpMethod.POST, "/api/v1/reservations", "/api/v1/reservations/*/items",

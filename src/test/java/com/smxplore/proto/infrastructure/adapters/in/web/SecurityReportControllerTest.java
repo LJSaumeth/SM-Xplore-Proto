@@ -14,6 +14,7 @@ import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultOneReportU
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportCommentsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportsByUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ConsultReportsUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.securityreport.MarkReportAsSolvedUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ReportIncidentUseCasePort;
 import com.smxplore.proto.infrastructure.adapters.in.web.controller.SecurityReportController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
@@ -64,6 +65,9 @@ class SecurityReportControllerTest {
     private CloseReportUseCasePort closeReportUseCase;
 
     @MockitoBean
+    private MarkReportAsSolvedUseCasePort markReportAsSolvedUseCase;
+
+    @MockitoBean
     private CommentReportUseCasePort commentReportUseCase;
 
     @MockitoBean
@@ -72,13 +76,15 @@ class SecurityReportControllerTest {
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("11111111-1111-1111-1111-111111111111")
+                                .claim("name", "Token User").claim("role", "TOURIST")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
     }
 
     @Test
     void reportIncidentMapsRequestAndReturnsCreatedReport() {
-        var user = new UserRef(UUID.randomUUID(), "Nestor");
+        var user = new UserRef(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Token User");
         var reported = SecurityReport.builder()
                 .user(user)
                 .text("Robo en el parque")
@@ -107,7 +113,7 @@ class SecurityReportControllerTest {
                 .jsonPath("$.id").isEqualTo(reported.getId().toString())
                 .jsonPath("$.text").isEqualTo("Robo en el parque")
                 .jsonPath("$.status").isEqualTo(SecurityReportStatus.ONGOING.name())
-                .jsonPath("$.user.name").isEqualTo("Nestor");
+                .jsonPath("$.user.name").isEqualTo("Token User");
     }
 
     @Test
@@ -143,20 +149,19 @@ class SecurityReportControllerTest {
     @Test
     void commentUsesTheReportIdOfThePath() {
         var reportId = UUID.randomUUID();
-        var commenter = new UserRef(UUID.randomUUID(), "Pedro");
         given(commentReportUseCase.handle(any())).willAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 
         webTestClient.post().uri("/api/v1/security-reports/{reportId}/comments", reportId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("""
                         {"user": {"id": "%s", "name": "Pedro"}, "content": "Yo lo vi"}
-                        """.formatted(commenter.id()))
+                        """.formatted(UUID.randomUUID()))
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.reportId").isEqualTo(reportId.toString())
                 .jsonPath("$.content").isEqualTo("Yo lo vi")
-                .jsonPath("$.user.name").isEqualTo("Pedro");
+                .jsonPath("$.user.name").isEqualTo("Token User");
     }
 
     @Test

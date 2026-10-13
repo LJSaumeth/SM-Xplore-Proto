@@ -7,11 +7,13 @@ import com.smxplore.proto.domain.ports.usecases.event.FindEventsBySiteUseCasePor
 import com.smxplore.proto.domain.ports.usecases.event.FindEventsByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.RegisterEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.SearchEventsUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.UpdateEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ViewEventDetailsUseCasePort;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ChangeEventStatusRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.EstimateAttendanceRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.EventRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.EventResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.UpdateEventRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.EventWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -46,6 +49,7 @@ public class EventController {
     private final EstimateEventAttendanceUseCasePort estimateEventAttendanceUseCase;
     private final FindEventsBySiteUseCasePort findEventsBySiteUseCase;
     private final FindEventsByZoneUseCasePort findEventsByZoneUseCase;
+    private final UpdateEventUseCasePort updateEventUseCase;
     private final EventWebMapper mapper;
 
     @PostMapping
@@ -99,5 +103,14 @@ public class EventController {
     @Operation(summary = "List the events of the sites of a zone")
     public Flux<EventResponse> findByZone(@PathVariable UUID zoneId) {
         return findEventsByZoneUseCase.handle(zoneId).map(mapper::toResponse);
+    }
+
+    @PutMapping("/{eventId}")
+    @Operation(summary = "Update the details of an event")
+    public Mono<EventResponse> update(@PathVariable UUID eventId,
+                                      @Valid @RequestBody UpdateEventRequest request) {
+        return updateEventUseCase.handle(eventId, request.name(), request.category(), request.price(),
+                        request.maxCapacity(), request.startsAt(), request.endsAt(), request.description())
+                .map(mapper::toResponse);
     }
 }

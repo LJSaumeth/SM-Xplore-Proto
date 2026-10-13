@@ -65,6 +65,22 @@ public class Event {
         this.expectedAttendance = expectedAttendance;
     }
 
+    /**
+     * Updates the editable details of the event (the site and the status are
+     * changed through their own operations).
+     */
+    public void updateDetails(String name, String category, BigDecimal price, int maxCapacity,
+                              Instant startsAt, Instant endsAt, String description) {
+        this.name = name;
+        this.category = category;
+        this.price = price;
+        this.maxCapacity = maxCapacity;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
+        this.description = description;
+        validate();
+    }
+
     private void validateSite() {
         if (siteId == null)
             throw new InvalidEventRequestException("Site is mandatory.");
