@@ -37,6 +37,9 @@ class FakeEventRepository implements EventRepositoryPort {
 
     @Override
     public Flux<Event> searchByName(String name) {
+        if (name == null) {
+            return Flux.empty();
+        }
         return findAll().filter(event -> event.getName() != null
                 && event.getName().toLowerCase().contains(name.toLowerCase()));
     }

@@ -3,8 +3,9 @@
 -- Mirrors the physical relational model (docs branch: docs/models/DB/sql/MODELO RELACIONAL FISICO.txt)
 -- with three intentional adjustments:
 --   * ids and fks are stored as uuid (the prototype keeps the UUID identity used across the code base),
---   * evento.expected_attendance is added because the attendance estimation use case persists it, and
---   * actividad.guia_id is nullable because an activity may not have a guide.
+--   * evento.expected_attendance is added because the attendance estimation use case persists it,
+--   * actividad.guia_id is nullable because an activity may not have a guide, and
+--   * start/end columns use timestamptz, the natural mapping for the domain's Instant values.
 -- The script is idempotent and runs at startup (spring.sql.init.mode=always).
 
 CREATE TABLE IF NOT EXISTS evento (

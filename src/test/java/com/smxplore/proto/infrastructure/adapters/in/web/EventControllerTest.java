@@ -186,6 +186,23 @@ class EventControllerTest {
     }
 
     @Test
+    void changeStatusReturnsUpdatedEvent() {
+        var id = UUID.randomUUID();
+        given(changeEventStatusUseCase.handle(id, EventStatus.PUBLISHED)).willReturn(Mono.just(
+                eventWith(id, EventStatus.PUBLISHED)));
+
+        webTestClient.patch().uri("/api/v1/events/{eventId}/status", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("PUBLISHED");
+    }
+
+    @Test
     void estimateAttendanceReturnsUpdatedEvent() {
         var id = UUID.randomUUID();
         var updated = eventWith(id, EventStatus.DRAFT);
