@@ -111,7 +111,7 @@ class SecurityIntegrationTest {
     }
 
     private String destinationManagerToken() {
-        // Privileged roles cannot self-register, so seed the manager directly
+        // Seed an already-approved manager directly (public registrations stay INACTIVE until approved)
         var email = uniqueEmail("manager");
         var manager = DestinationManager.builder()
                 .id(UUID.randomUUID())
@@ -356,6 +356,13 @@ class SecurityIntegrationTest {
 
         // Only an admin can approve the registration
         var tourist = tourist();
+
+        // a pending provider has no public profile
+        webTestClient.get().uri("/api/v1/users/providers/{providerId}", providerId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isNotFound();
+
         webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
                 .headers(h -> h.setBearerAuth(tourist.token()))
                 .exchange()
@@ -401,6 +408,12 @@ class SecurityIntegrationTest {
         assertThat(approved).isNotNull();
         assertThat(approved.registrationStatus()).isEqualTo(RegistrationStatus.APPROVED);
         assertThat(approved.status()).isEqualTo(UserStatus.ACTIVE);
+
+        // the approved provider becomes publicly visible
+        webTestClient.get().uri("/api/v1/users/providers/{providerId}", providerId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk();
 
         // After approval the provider can log in with the SERVICE_PROVIDER role
         var providerToken = login(providerEmail, PASSWORD);
@@ -466,7 +479,18 @@ class SecurityIntegrationTest {
     @Test
     void blockedProviderCannotBeApproved() {
         var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
-        var providerId = registerServiceProvider(uniqueEmail("blocked-provider"));
+        var providerEmail = uniqueEmail("blocked-provider");
+        var providerId = registerServiceProvider(providerEmail);
+
+        // a pending (inactive) registration cannot be activated directly
+        webTestClient.patch().uri("/api/v1/users/{userId}/status", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "ACTIVE"}
+                        """)
+                .exchange()
+                .expectStatus().isBadRequest();
 
         // the admin blocks the pending registration
         webTestClient.patch().uri("/api/v1/users/{userId}/status", providerId)
@@ -484,7 +508,7 @@ class SecurityIntegrationTest {
                 .exchange()
                 .expectStatus().isForbidden();
 
-        // reactivating makes approval possible again
+        // reactivating unblocks the account, but login stays blocked until the registration is approved
         webTestClient.patch().uri("/api/v1/users/{userId}/status", providerId)
                 .headers(h -> h.setBearerAuth(admin))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -494,10 +518,20 @@ class SecurityIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
+        webTestClient.post().uri("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"email": "%s", "password": "%s"}
+                        """.formatted(providerEmail, PASSWORD))
+                .exchange()
+                .expectStatus().isForbidden();
+
         webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()
                 .expectStatus().isOk();
+
+        assertThat(login(providerEmail, PASSWORD)).isNotBlank();
     }
 
     @Test
@@ -533,6 +567,26 @@ class SecurityIntegrationTest {
                 .exchange()
                 .expectStatus().isForbidden();
 
+        // wrong-role ids are not approvable
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-guide", tourist.id())
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // the pending guide shows up in the admin listing
+        var pendingGuides = webTestClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/users/search")
+                        .queryParam("role", "GUIDE")
+                        .queryParam("status", "INACTIVE")
+                        .build())
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(UserResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(pendingGuides).isNotNull();
+        assertThat(pendingGuides).anyMatch(user -> guideEmail.equals(user.email()));
+
         var approvedGuide = webTestClient.post().uri("/api/v1/users/{userId}/approve-guide", guideId)
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()
@@ -559,6 +613,21 @@ class SecurityIntegrationTest {
                 .returnResult()
                 .getResponseBody();
         var managerId = Objects.requireNonNull(manager).id();
+
+        // while pending the manager cannot log in either
+        webTestClient.post().uri("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"email": "%s", "password": "%s"}
+                        """.formatted(managerEmail, PASSWORD))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // wrong-role ids are not approvable
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-manager", tourist.id())
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isNotFound();
 
         webTestClient.post().uri("/api/v1/users/{userId}/approve-manager", managerId)
                 .headers(h -> h.setBearerAuth(admin))

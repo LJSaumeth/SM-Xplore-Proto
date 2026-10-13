@@ -91,7 +91,7 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete your own account (admins may delete any account)")
+    @Operation(summary = "Delete your own account (admins may delete other accounts)")
     public Mono<Void> deleteOwnAccount(@PathVariable UUID userId, @AuthenticationPrincipal Jwt jwt) {
         requireSelfOrAdmin(jwt, userId);
         requireNotSelfAdminDeletion(jwt, userId);
@@ -113,7 +113,7 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}/role")
-    @Operation(summary = "Assign a role to a user")
+    @Operation(summary = "Assign a role to a user (role changes are not supported)")
     public Mono<UserResponse> assignRole(@PathVariable UUID userId,
                                          @Valid @RequestBody AssignRoleRequest request) {
         return assignUserRoleUseCase.handle(userId, request.role()).map(mapper::toResponse);
@@ -128,7 +128,7 @@ public class UserController {
 
     @DeleteMapping("/{userId}/admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete a user account (admin)")
+    @Operation(summary = "Delete a user account (admin; cannot target themselves)")
     public Mono<Void> adminDelete(@PathVariable UUID userId, @AuthenticationPrincipal Jwt jwt) {
         requireNotSelfAdminDeletion(jwt, userId);
         return adminDeleteUserAccountUseCase.handle(userId);
@@ -177,7 +177,7 @@ public class UserController {
         var isSelf = userId.toString().equals(jwt.getSubject());
         var isAdmin = UserRole.ADMIN.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
         if (!isSelf && !isAdmin) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own account.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only access or modify your own account.");
         }
     }
 

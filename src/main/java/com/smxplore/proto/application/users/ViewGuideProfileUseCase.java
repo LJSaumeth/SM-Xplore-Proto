@@ -2,6 +2,7 @@ package com.smxplore.proto.application.users;
 
 import com.smxplore.proto.domain.exceptions.UserNotFoundException;
 import com.smxplore.proto.domain.model.guide.Guide;
+import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.GuideRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.ViewGuideProfileUseCasePort;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class ViewGuideProfileUseCase implements ViewGuideProfileUseCasePort {
     @Override
     public Mono<Guide> handle(UUID guideId) {
         return guideRepository.findById(guideId)
+                .filter(guide -> guide.getStatus() == UserStatus.ACTIVE)
                 .switchIfEmpty(Mono.error(new UserNotFoundException(guideId)));
     }
 }

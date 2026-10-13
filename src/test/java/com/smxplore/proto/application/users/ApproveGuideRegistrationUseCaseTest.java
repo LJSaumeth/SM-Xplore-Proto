@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.smxplore.proto.domain.exceptions.GuideRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.exceptions.UserNotFoundException;
 import com.smxplore.proto.domain.model.guide.Guide;
 import com.smxplore.proto.domain.model.user.DniType;
@@ -74,6 +75,18 @@ class ApproveGuideRegistrationUseCaseTest {
 
         StepVerifier.create(useCase.handle(guide.getId()))
                 .expectError(GuideRegistrationNotPendingException.class)
+                .verify();
+
+        verify(guideRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldFailWhenTheAccountIsBlockedOrSuspended() {
+        var guide = guide(UserStatus.BLOCKED);
+        when(guideRepository.findById(guide.getId())).thenReturn(Mono.just(guide));
+
+        StepVerifier.create(useCase.handle(guide.getId()))
+                .expectError(UserAccountNotActiveException.class)
                 .verify();
 
         verify(guideRepository, never()).save(any());

@@ -26,9 +26,6 @@ import com.smxplore.proto.infrastructure.adapters.out.postgres.repository.Touris
 import com.smxplore.proto.infrastructure.adapters.out.postgres.repository.UserR2dbcRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
-import org.springframework.data.relational.core.query.Criteria;
-import org.springframework.data.relational.core.query.Query;
-import org.springframework.data.relational.core.query.Update;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,8 +39,6 @@ import java.util.UUID;
 @Repository
 @RequiredArgsConstructor
 public class UserR2dbcAdapter implements UserRepositoryPort {
-
-    private static final String ROLE_COLUMN = "role";
 
     private final UserR2dbcRepository userRepository;
     private final AdminR2dbcRepository adminRepository;
@@ -125,13 +120,6 @@ public class UserR2dbcAdapter implements UserRepositoryPort {
                         row.get("signed_up_at", OffsetDateTime.class).toInstant()))
                 .all()
                 .flatMap(this::assemble);
-    }
-
-    @Override
-    public Mono<Void> updateRole(UUID id, UserRole newRole) {
-        var query = Query.query(Criteria.where("id").is(id));
-        var update = Update.update(ROLE_COLUMN, newRole.name());
-        return template.update(UserEntity.class).matching(query).apply(update).then();
     }
 
     @Override

@@ -80,4 +80,14 @@ class BlockOrSuspendUserUseCaseTest {
                 .expectError(InvalidUserDataException.class)
                 .verify();
     }
+
+    @Test
+    void shouldRejectDirectActivationOfInactiveAccounts() {
+        var user = tourist(UserStatus.INACTIVE);
+        when(userRepository.findById(user.getId())).thenReturn(Mono.just(user));
+
+        StepVerifier.create(useCase.handle(user.getId(), UserStatus.ACTIVE))
+                .expectError(InvalidUserDataException.class)
+                .verify();
+    }
 }

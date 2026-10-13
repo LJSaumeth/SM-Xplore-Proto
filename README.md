@@ -59,11 +59,16 @@ Swagger UI / docs paths.
   endpoints (`GET`/`PUT`/`DELETE /api/v1/users/{id}` are self-or-admin). Cross-user
   ownership checks for reservations, services and security reports are pending —
   tracked as follow-ups with each module owner.
+- Public profiles (`GET /api/v1/users/guides/{id}`, `/users/providers/{id}`) only
+  expose active (approved) accounts, but their contact data (email/phone) remains
+  visible to any authenticated user — pending a product decision.
 - Role changes are rejected (400): each role has its own profile data, so an
   account must be created with the role it needs (see the `approve-*` flows).
 - Registration **reject** flows are not exposed yet (the domain supports rejecting
   provider registrations); blocked or suspended accounts can be reactivated by an
-  admin with `PATCH /api/v1/users/{id}/status` (`ACTIVE`).
+  admin with `PATCH /api/v1/users/{id}/status` (`ACTIVE`). Pending (`INACTIVE`)
+  accounts cannot be activated directly — they must go through the `approve-*`
+  endpoints, and a provider can only log in once its registration is `APPROVED`.
 - No refresh tokens and no revocation: a token stays valid until `exp`
   (60 minutes by default, `JWT_EXPIRATION_MINUTES`); blocking a user does not
   invalidate tokens already issued.

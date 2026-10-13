@@ -1,6 +1,7 @@
 package com.smxplore.proto.domain.model.serviceprovider;
 
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
+import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotApprovedException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.model.user.User;
@@ -57,6 +58,14 @@ public class ServiceProvider extends User {
     public void rejectRegistration() {
         ensureRegistrationIsPending();
         this.registrationStatus = RegistrationStatus.REJECTED;
+    }
+
+    @Override
+    public void ensureActive() {
+        super.ensureActive();
+        if (registrationStatus != RegistrationStatus.APPROVED) {
+            throw new ServiceProviderRegistrationNotApprovedException(getId());
+        }
     }
 
     public boolean isRegistrationApproved() {

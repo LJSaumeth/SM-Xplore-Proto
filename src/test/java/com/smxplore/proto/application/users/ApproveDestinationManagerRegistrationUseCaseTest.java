@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.smxplore.proto.domain.exceptions.DestinationManagerRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.exceptions.UserNotFoundException;
 import com.smxplore.proto.domain.model.destinationmanager.DestinationManager;
 import com.smxplore.proto.domain.model.user.UserRole;
@@ -73,6 +74,18 @@ class ApproveDestinationManagerRegistrationUseCaseTest {
 
         StepVerifier.create(useCase.handle(manager.getId()))
                 .expectError(DestinationManagerRegistrationNotPendingException.class)
+                .verify();
+
+        verify(destinationManagerRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldFailWhenTheAccountIsBlockedOrSuspended() {
+        var manager = manager(UserStatus.BLOCKED);
+        when(destinationManagerRepository.findById(manager.getId())).thenReturn(Mono.just(manager));
+
+        StepVerifier.create(useCase.handle(manager.getId()))
+                .expectError(UserAccountNotActiveException.class)
                 .verify();
 
         verify(destinationManagerRepository, never()).save(any());

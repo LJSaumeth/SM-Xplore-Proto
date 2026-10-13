@@ -41,8 +41,7 @@ public class RegisterUserUseCase implements RegisterUserUseCasePort {
     private void ensureSelfRegistrable(User user) {
         if (!SELF_REGISTRABLE_ROLES.contains(user.getRole())) {
             throw new InvalidUserRoleException(
-                    "Role %s cannot be self-registered; an administrator must assign it."
-                            .formatted(user.getRole()));
+                    "Role %s cannot be self-registered.".formatted(user.getRole()));
         }
     }
 

@@ -2,6 +2,7 @@ package com.smxplore.proto.domain.model.destinationmanager;
 
 import com.smxplore.proto.domain.exceptions.DestinationManagerRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
+import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.model.user.User;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
@@ -33,6 +34,9 @@ public class DestinationManager extends User {
     }
 
     public void approveRegistration() {
+        if (getStatus() == UserStatus.BLOCKED || getStatus() == UserStatus.SUSPENDED) {
+            throw new UserAccountNotActiveException(getId(), getStatus());
+        }
         if (getStatus() != UserStatus.INACTIVE) {
             throw new DestinationManagerRegistrationNotPendingException(getId());
         }

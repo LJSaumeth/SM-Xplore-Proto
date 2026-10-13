@@ -1,10 +1,7 @@
 package com.smxplore.proto.application.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
@@ -60,8 +57,6 @@ class AssignUserRoleUseCaseTest {
         StepVerifier.create(useCase.handle(user.getId(), UserRole.TOURIST))
                 .assertNext(result -> assertThat(result).isSameAs(user))
                 .verifyComplete();
-
-        verify(userRepository, never()).updateRole(any(), any());
     }
 
     @Test
@@ -72,7 +67,5 @@ class AssignUserRoleUseCaseTest {
         StepVerifier.create(useCase.handle(user.getId(), UserRole.GUIDE))
                 .expectError(InvalidUserRoleException.class)
                 .verify();
-
-        verify(userRepository, never()).updateRole(any(), any());
     }
 }

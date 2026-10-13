@@ -35,7 +35,13 @@ public class BlockOrSuspendUserUseCase implements BlockOrSuspendUserUseCasePort 
 
     private static void applyStatus(User user, UserStatus status) {
         switch (status) {
-            case ACTIVE -> user.activate();
+            case ACTIVE -> {
+                if (user.getStatus() == UserStatus.INACTIVE) {
+                    throw new InvalidUserDataException(
+                            "Inactive accounts cannot be activated directly; pending registrations must be approved.");
+                }
+                user.activate();
+            }
             case BLOCKED -> user.block();
             case SUSPENDED -> user.suspend();
             default -> throw new InvalidUserDataException(INVALID_TARGET_MESSAGE);
