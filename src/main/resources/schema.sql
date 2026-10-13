@@ -139,3 +139,12 @@ CREATE INDEX IF NOT EXISTS evento_sitio_idx ON evento (sitio_id);
 CREATE INDEX IF NOT EXISTS evento_name_idx ON evento (name);
 CREATE INDEX IF NOT EXISTS actividad_sitio_idx ON actividad (sitio_id);
 CREATE INDEX IF NOT EXISTS actividad_category_idx ON actividad (type);
+-- Schema for the sites & zones module (zones in PostgreSQL; sites live in MongoDB).
+-- The zone is the relational parent referenced by sites and by the catalog filters.
+
+CREATE TABLE IF NOT EXISTS zona (
+    id   uuid PRIMARY KEY,
+    name varchar(150) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS zona_name_idx ON zona (name);

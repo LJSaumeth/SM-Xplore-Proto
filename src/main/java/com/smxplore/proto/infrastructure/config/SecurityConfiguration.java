@@ -72,6 +72,11 @@ public class SecurityConfiguration {
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/events/*/status", "/api/v1/events/*/attendance")
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
+                        // Sites & zones: reads are public (catalog above); management is manager/admin
+                        .pathMatchers(HttpMethod.POST, "/api/v1/zones", "/api/v1/sites")
+                        .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
+                        .pathMatchers(HttpMethod.PATCH, "/api/v1/zones/*", "/api/v1/sites/*")
+                        .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
                         // Activities: managed by destination managers and guides
                         .pathMatchers(HttpMethod.POST, "/api/v1/activities", "/api/v1/activities/*/cancel")
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.GUIDE.name(), UserRole.ADMIN.name())

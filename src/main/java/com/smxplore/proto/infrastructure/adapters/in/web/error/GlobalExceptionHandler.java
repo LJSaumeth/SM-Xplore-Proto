@@ -9,10 +9,12 @@ import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
 import com.smxplore.proto.domain.exceptions.InvalidZoneException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotApprovedException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.SiteNotFoundException;
 import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.exceptions.UserEmailAlreadyRegisteredException;
 import com.smxplore.proto.domain.exceptions.UserNotFoundException;
 import com.smxplore.proto.domain.exceptions.UserPhoneAlreadyRegisteredException;
+import com.smxplore.proto.domain.exceptions.ZoneNotFoundException;
 import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
 import com.smxplore.proto.domain.exceptions.activity.InvalidActivityCapacityException;
 import com.smxplore.proto.domain.exceptions.activity.InvalidActivityNameException;
@@ -83,6 +85,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             ReportNotFoundException.class,
             ServiceNotFoundException.class,
+            SiteNotFoundException.class,
+            ZoneNotFoundException.class,
             UserNotFoundException.class,
             ReservationNotFoundException.class,
             ReservationItemNotFoundException.class,

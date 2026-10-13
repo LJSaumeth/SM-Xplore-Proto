@@ -9,7 +9,9 @@ import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.GuideProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.SiteResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ZoneResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -755,6 +757,80 @@ class SecurityIntegrationTest {
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void siteZoneCatalogAndManagementFlow() {
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+        var tourist = tourist();
+
+        // catalog reads are public
+        webTestClient.get().uri("/api/v1/zones")
+                .exchange()
+                .expectStatus().isOk();
+
+        // only managers/admins can create
+        webTestClient.post().uri("/api/v1/zones")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"name": "Forbidden Zone"}
+                        """)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var zone = webTestClient.post().uri("/api/v1/zones")
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"name": "Smoke Zone"}
+                        """)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ZoneResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var zoneId = Objects.requireNonNull(zone).id();
+
+        var site = webTestClient.post().uri("/api/v1/sites")
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"zoneId": "%s", "name": "Smoke Site", "latitude": 11.24, "longitude": -74.19,
+                         "photoUrls": ["https://example.com/site.jpg"]}
+                        """.formatted(zoneId))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(SiteResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var siteId = Objects.requireNonNull(site).id();
+
+        // public reads see the created catalog
+        webTestClient.get().uri("/api/v1/sites/{siteId}", siteId)
+                .exchange()
+                .expectStatus().isOk();
+
+        var zoneSites = webTestClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/sites")
+                        .queryParam("zoneId", zoneId)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(SiteResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(zoneSites).isNotNull();
+        assertThat(zoneSites).anyMatch(item -> siteId.equals(item.id()));
+
+        // renaming requires the manager role
+        webTestClient.patch().uri("/api/v1/zones/{zoneId}", zoneId)
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"name": "Smoke Zone Renamed"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
     }
 
     @Test
