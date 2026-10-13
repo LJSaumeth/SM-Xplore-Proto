@@ -4,10 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
 import com.smxplore.proto.domain.exceptions.UserEmailAlreadyRegisteredException;
+import com.smxplore.proto.domain.model.admin.Admin;
 import com.smxplore.proto.domain.model.tourist.Tourist;
 import com.smxplore.proto.domain.model.user.DniType;
 import com.smxplore.proto.domain.model.user.UserRole;
@@ -69,5 +72,26 @@ class RegisterUserUseCaseTest {
         StepVerifier.create(useCase.handle(user, "plain"))
                 .expectError(UserEmailAlreadyRegisteredException.class)
                 .verify();
+    }
+
+    @Test
+    void shouldRejectPrivilegedRolesInSelfRegistration() {
+        var admin = Admin.builder()
+                .id(UUID.randomUUID())
+                .fullName("Fake Admin")
+                .email("fake.admin@example.com")
+                .phone("+573001112222")
+                .role(UserRole.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("999999999")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+
+        StepVerifier.create(useCase.handle(admin, "plain"))
+                .expectError(InvalidUserRoleException.class)
+                .verify();
+
+        verify(userRepository, never()).save(any());
     }
 }

@@ -10,6 +10,8 @@ import com.smxplore.proto.domain.ports.usecases.LoginUseCasePort;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
+import java.util.Locale;
+
 @RequiredArgsConstructor
 public class LoginUseCase implements LoginUseCasePort {
 
@@ -19,7 +21,8 @@ public class LoginUseCase implements LoginUseCasePort {
 
     @Override
     public Mono<LoginResult> handle(String email, String rawPassword) {
-        return userRepository.findByEmail(email)
+        var normalizedEmail = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+        return userRepository.findByEmail(normalizedEmail)
                 .switchIfEmpty(Mono.error(new InvalidCredentialsException()))
                 .flatMap(user -> passwordHasher.matches(rawPassword, user.getPasswordHash())
                         .filter(Boolean::booleanValue)

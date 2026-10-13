@@ -34,14 +34,14 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Register a new user account")
+    @Operation(summary = "Register a new user account", security = {})
     public Mono<UserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
         return registerUserUseCase.handle(mapper.toDomain(request), request.password())
                 .map(mapper::toResponse);
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Log in with email and password")
+    @Operation(summary = "Log in with email and password", security = {})
     public Mono<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return loginUseCase.handle(request.email(), request.password())
                 .map(mapper::toAuthResponse);
@@ -49,7 +49,7 @@ public class AuthController {
 
     @PostMapping("/recover-password")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    @Operation(summary = "Request a password recovery")
+    @Operation(summary = "Request a password recovery", security = {})
     public Mono<Void> recoverPassword(@Valid @RequestBody RecoverPasswordRequest request) {
         return recoverPasswordUseCase.handle(request.email());
     }

@@ -58,6 +58,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ahorasi}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # Seguridad — valores SOLO para dev/demo: cámbialos en cualquier despliegue real
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-32-bytes-minimum!}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@ahorasi.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123*}
     ports:
       - "${APP_PORT:-8080}:8080"
     restart: unless-stopped

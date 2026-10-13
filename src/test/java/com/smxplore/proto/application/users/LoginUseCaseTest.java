@@ -99,4 +99,18 @@ class LoginUseCaseTest {
 
         verify(tokenIssuer, never()).issue(any());
     }
+
+    @Test
+    void shouldNormalizeEmailWhenLoggingIn() {
+        var user = tourist(UserStatus.ACTIVE);
+        when(userRepository.findByEmail("john.doe@example.com")).thenReturn(Mono.just(user));
+        when(passwordHasher.matches(anyString(), anyString())).thenReturn(Mono.just(true));
+        when(tokenIssuer.issue(user)).thenReturn(Mono.just(new TokenIssuerPort.IssuedToken("jwt-token", 3600)));
+
+        StepVerifier.create(useCase.handle("  John.Doe@Example.Com ", "plain"))
+                .assertNext(result -> assertEquals("jwt-token", result.token()))
+                .verifyComplete();
+
+        verify(tokenIssuer).issue(user);
+    }
 }
