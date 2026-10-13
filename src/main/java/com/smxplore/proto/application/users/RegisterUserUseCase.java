@@ -31,17 +31,11 @@ public class RegisterUserUseCase implements RegisterUserUseCasePort {
 
     private Mono<User> ensureUnique(User user) {
         return userRepository.existsByEmail(user.getEmail())
-                .flatMap(emailExists -> {
-                    if (emailExists) {
-                        return Mono.error(new UserEmailAlreadyRegisteredException(user.getEmail()));
-                    }
-                    return userRepository.existsByPhone(user.getPhone());
-                })
-                .flatMap(phoneExists -> {
-                    if (phoneExists) {
-                        return Mono.error(new UserPhoneAlreadyRegisteredException(user.getPhone()));
-                    }
-                    return Mono.just(user);
-                });
+                .filter(emailExists -> !emailExists)
+                .switchIfEmpty(Mono.error(new UserEmailAlreadyRegisteredException(user.getEmail())))
+                .then(Mono.defer(() -> userRepository.existsByPhone(user.getPhone())))
+                .filter(phoneExists -> !phoneExists)
+                .switchIfEmpty(Mono.error(new UserPhoneAlreadyRegisteredException(user.getPhone())))
+                .thenReturn(user);
     }
 }

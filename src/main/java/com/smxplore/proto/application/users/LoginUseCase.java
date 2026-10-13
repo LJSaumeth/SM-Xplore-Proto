@@ -19,12 +19,9 @@ public class LoginUseCase implements LoginUseCasePort {
         return userRepository.findByEmail(email)
                 .switchIfEmpty(Mono.error(new InvalidCredentialsException()))
                 .flatMap(user -> passwordHasher.matches(rawPassword, user.getPasswordHash())
-                        .flatMap(matches -> {
-                            if (!matches) {
-                                return Mono.error(new InvalidCredentialsException());
-                            }
-                            user.ensureActive();
-                            return Mono.just(user);
-                        }));
+                        .filter(Boolean::booleanValue)
+                        .switchIfEmpty(Mono.error(new InvalidCredentialsException()))
+                        .thenReturn(user))
+                .doOnNext(User::ensureActive);
     }
 }

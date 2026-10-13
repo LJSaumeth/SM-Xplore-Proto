@@ -18,18 +18,24 @@ public class BlockOrSuspendUserUseCase implements BlockOrSuspendUserUseCasePort 
 
     @Override
     public Mono<User> handle(UUID userId, UserStatus targetStatus) {
-        if (targetStatus != UserStatus.BLOCKED && targetStatus != UserStatus.SUSPENDED) {
-            return Mono.error(new InvalidUserDataException("Target status must be BLOCKED or SUSPENDED."));
+        return Mono.justOrEmpty(targetStatus)
+                .filter(BlockOrSuspendUserUseCase::isBlockable)
+                .switchIfEmpty(Mono.error(new InvalidUserDataException("Target status must be BLOCKED or SUSPENDED.")))
+                .flatMap(status -> userRepository.findById(userId)
+                        .switchIfEmpty(Mono.error(new UserNotFoundException(userId)))
+                        .doOnNext(user -> applyStatus(user, status))
+                        .flatMap(userRepository::save));
+    }
+
+    private static boolean isBlockable(UserStatus status) {
+        return status == UserStatus.BLOCKED || status == UserStatus.SUSPENDED;
+    }
+
+    private static void applyStatus(User user, UserStatus status) {
+        switch (status) {
+            case BLOCKED -> user.block();
+            case SUSPENDED -> user.suspend();
+            default -> throw new InvalidUserDataException("Target status must be BLOCKED or SUSPENDED.");
         }
-        return userRepository.findById(userId)
-                .switchIfEmpty(Mono.error(new UserNotFoundException(userId)))
-                .doOnNext(user -> {
-                    if (targetStatus == UserStatus.BLOCKED) {
-                        user.block();
-                    } else {
-                        user.suspend();
-                    }
-                })
-                .flatMap(userRepository::save);
     }
 }
