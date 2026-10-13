@@ -43,3 +43,99 @@ CREATE TABLE IF NOT EXISTS reservation_items (
 CREATE INDEX IF NOT EXISTS reservation_items_reservation_idx ON reservation_items (reservation_id);
 CREATE INDEX IF NOT EXISTS reservation_items_item_idx ON reservation_items (item_id);
 CREATE INDEX IF NOT EXISTS reservation_items_type_idx ON reservation_items (type);
+-- Schema for the Users bounded context (PostgreSQL).
+-- Joined-table inheritance: a common "users" table plus one table per role.
+
+CREATE TABLE IF NOT EXISTS users (
+    id            UUID         PRIMARY KEY,
+    full_name     VARCHAR(150) NOT NULL,
+    email         VARCHAR(150) NOT NULL UNIQUE,
+    phone         VARCHAR(20)  NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role          VARCHAR(30)  NOT NULL,
+    status        VARCHAR(30)  NOT NULL,
+    signed_up_at  TIMESTAMPTZ  NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admins (
+    id               UUID        PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    dni_number       VARCHAR(30) NOT NULL UNIQUE,
+    dni_type         VARCHAR(20) NOT NULL,
+    last_access_date TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS guides (
+    id                  UUID        PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    dni_number          VARCHAR(30) NOT NULL UNIQUE,
+    dni_type            VARCHAR(20) NOT NULL,
+    license             VARCHAR(50) NOT NULL UNIQUE,
+    start_operation_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS destination_managers (
+    id                   UUID        PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    nit                  VARCHAR(30) NOT NULL UNIQUE,
+    start_operation_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS service_providers (
+    id                   UUID        PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    nit                  VARCHAR(30) NOT NULL UNIQUE,
+    service_type         VARCHAR(50),
+    registration_status  VARCHAR(30) NOT NULL,
+    latitude             DOUBLE PRECISION,
+    longitude            DOUBLE PRECISION,
+    start_operation_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS tourists (
+    id                 UUID        PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    dni_number         VARCHAR(30) NOT NULL UNIQUE,
+    dni_type           VARCHAR(20) NOT NULL,
+    preferred_language VARCHAR(50),
+    birth_date         DATE,
+    nationality        VARCHAR(80)
+);
+-- Schema for the events & activities module (PostgreSQL).
+--
+-- Mirrors the physical relational model (docs branch: docs/models/DB/sql/MODELO RELACIONAL FISICO.txt)
+-- with three intentional adjustments:
+--   * ids and fks are stored as uuid (the prototype keeps the UUID identity used across the code base),
+--   * evento.expected_attendance is added because the attendance estimation use case persists it,
+--   * actividad.guia_id is nullable because an activity may not have a guide, and
+--   * start/end columns use timestamptz, the natural mapping for the domain's Instant values.
+-- The script is idempotent and runs at startup (spring.sql.init.mode=always).
+
+CREATE TABLE IF NOT EXISTS evento (
+    id                  uuid PRIMARY KEY,
+    sitio_id            uuid NOT NULL,
+    name                varchar(150) NOT NULL,
+    category            varchar(50),
+    status              varchar(30),
+    price               numeric(12, 2) NOT NULL DEFAULT 0,
+    max_capacity        integer,
+    starts_at           timestamptz NOT NULL,
+    ends_at             timestamptz NOT NULL,
+    description         text,
+    expected_attendance integer NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS actividad (
+    id            uuid PRIMARY KEY,
+    sitio_id      uuid NOT NULL,
+    guia_id       uuid,
+    name          varchar(150) NOT NULL,
+    type          varchar(50),
+    status        varchar(30),
+    price         numeric(12, 2) NOT NULL DEFAULT 0,
+    max_capacity  integer,
+    duration_mins integer,
+    starts_at     timestamptz NOT NULL,
+    ends_at       timestamptz NOT NULL,
+    description   text
+);
+
+CREATE INDEX IF NOT EXISTS evento_sitio_idx ON evento (sitio_id);
+CREATE INDEX IF NOT EXISTS evento_name_idx ON evento (name);
+CREATE INDEX IF NOT EXISTS actividad_sitio_idx ON actividad (sitio_id);
+CREATE INDEX IF NOT EXISTS actividad_category_idx ON actividad (type);
