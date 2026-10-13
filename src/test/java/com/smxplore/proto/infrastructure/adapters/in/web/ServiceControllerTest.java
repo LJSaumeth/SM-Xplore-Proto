@@ -17,6 +17,7 @@ import com.smxplore.proto.domain.ports.usecases.service.FindServicesByTypeUseCas
 import com.smxplore.proto.domain.ports.usecases.service.MarkServiceAsAvailableUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.service.MarkServiceAsUnavailableUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.service.RegisterServiceUseCasePort;
+import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.controller.ServiceController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ServiceWebMapperImpl;
@@ -36,6 +37,8 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @WebFluxTest(controllers = ServiceController.class)
 @Import({ServiceWebMapperImpl.class, GlobalExceptionHandler.class})
@@ -74,11 +77,41 @@ class ServiceControllerTest {
     @MockitoBean
     private AddAttributeToServiceUseCasePort addAttributeToServiceUseCase;
 
+    @MockitoBean
+    private ServiceRepositoryPort serviceRepository;
+
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("tester").claim("role", "ADMIN")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
+    }
+
+    @Test
+    void changePriceRejectsWhenTheProviderIsNotTheOwner() {
+        var service = Service.builder()
+                .id(UUID.randomUUID())
+                .name("Airport transport")
+                .type(ServiceType.TRANSPORT)
+                .provider(new ProviderRef(UUID.randomUUID(), "Ana"))
+                .location(new Location(4.65, -74.05))
+                .price(new BigDecimal("50000.00"))
+                .build();
+        given(serviceRepository.findById(service.getId())).willReturn(Mono.just(service));
+
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "SERVICE_PROVIDER")));
+
+        client.patch().uri("/api/v1/services/{serviceId}/price", service.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"price": 60000.00}
+                        """)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        verify(changeServicePriceUseCase, never()).handle(any(), any());
     }
 
     @Test

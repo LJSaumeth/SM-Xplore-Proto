@@ -6,6 +6,7 @@ import com.smxplore.proto.domain.ports.repository.EventRepositoryPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,5 +43,15 @@ class FakeEventRepository implements EventRepositoryPort {
         }
         return findAll().filter(event -> event.getName() != null
                 && event.getName().toLowerCase().contains(name.toLowerCase()));
+    }
+
+    @Override
+    public Flux<Event> findAllBySiteId(UUID siteId) {
+        return findAll().filter(event -> siteId.equals(event.getSiteId()));
+    }
+
+    @Override
+    public Flux<Event> findAllBySiteIdIn(Collection<UUID> siteIds) {
+        return findAll().filter(event -> siteIds.contains(event.getSiteId()));
     }
 }

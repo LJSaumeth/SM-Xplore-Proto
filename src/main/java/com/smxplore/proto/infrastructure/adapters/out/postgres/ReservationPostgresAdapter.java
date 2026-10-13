@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.out.postgres;
 
 import com.smxplore.proto.domain.model.reservation.Reservation;
+import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.model.reservation.ReservationStatus;
 import com.smxplore.proto.domain.ports.repository.ReservationRepositoryPort;
 import com.smxplore.proto.infrastructure.adapters.out.postgres.entity.ReservationEntity;
@@ -27,9 +28,9 @@ public class ReservationPostgresAdapter implements ReservationRepositoryPort {
     private final ReservationPersistenceMapper mapper;
 
     /**
-     * Los ids se generan en el dominio, por lo que el save() de Spring Data no
-     * puede decidir entre insert y update con isNew() (haría siempre update).
-     * Aquí se consulta la existencia y se hace el upsert explícito.
+     * Ids are generated in the domain, so Spring Data's save() cannot decide
+     * between insert and update with isNew() (it would always update). Here the
+     * existence is checked and the upsert is explicit.
      */
     @Override
     public Mono<Reservation> save(Reservation reservation) {
@@ -57,12 +58,48 @@ public class ReservationPostgresAdapter implements ReservationRepositoryPort {
         return repository.findAllByStatus(status, page(limit)).map(mapper::toDomain);
     }
 
+    @Override
+    public Flux<Reservation> findAllByProviderId(UUID providerId, ReservationStatus status, int limit) {
+        return (status == null
+                ? repository.findAllByProviderId(providerId, page(limit))
+                : repository.findAllByProviderIdAndStatus(providerId, status, page(limit)))
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public Flux<Reservation> findAllByGuideId(UUID guideId, ReservationStatus status, int limit) {
+        return (status == null
+                ? repository.findAllByGuideId(guideId, page(limit))
+                : repository.findAllByGuideIdAndStatus(guideId, status, page(limit)))
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public Flux<Reservation> findAllByItem(UUID itemId, ReservationItemType type, int limit) {
+        return repository.findAllByItem(itemId, type.name(), limit).map(mapper::toDomain);
+    }
+
     private PageRequest page(int limit) {
         return PageRequest.of(0, limit, STABLE_ORDER);
     }
 
     private Mono<ReservationEntity> saveEntity(ReservationEntity entity) {
         return repository.existsById(entity.id())
-                .flatMap(exists -> exists ? repository.save(entity) : template.insert(entity));
+                .flatMap(exists -> exists ? repository.save(entity) : insertWithCode(entity));
+    }
+
+    /** The readable code (R-####) is generated once, when the reservation is first inserted. */
+    private Mono<ReservationEntity> insertWithCode(ReservationEntity entity) {
+        if (entity.code() != null) {
+            return template.insert(entity);
+        }
+        return template.getDatabaseClient()
+                .sql("SELECT nextval('reservation_code_seq')")
+                .map((row, metadata) -> row.get(0, Long.class))
+                .one()
+                .flatMap(sequence -> template.insert(new ReservationEntity(entity.id(), entity.touristId(),
+                        entity.numberOfPeople(), entity.total(), entity.paymentMethod(), entity.status(),
+                        entity.bookedAt(), entity.bookedFor(), entity.notes(), entity.providerId(),
+                        entity.guideId(), "R-" + sequence)));
     }
 }

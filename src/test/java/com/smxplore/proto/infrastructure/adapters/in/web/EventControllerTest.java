@@ -8,8 +8,11 @@ import com.smxplore.proto.domain.model.event.EventStatus;
 import com.smxplore.proto.domain.ports.usecases.event.ChangeEventStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ConsultEventsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.EstimateEventAttendanceUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.FindEventsBySiteUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.FindEventsByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.RegisterEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.SearchEventsUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.UpdateEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ViewEventDetailsUseCasePort;
 import com.smxplore.proto.infrastructure.adapters.in.web.controller.EventController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
@@ -31,6 +34,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 
@@ -59,10 +63,20 @@ class EventControllerTest {
     @MockitoBean
     private EstimateEventAttendanceUseCasePort estimateEventAttendanceUseCase;
 
+    @MockitoBean
+    private FindEventsBySiteUseCasePort findEventsBySiteUseCase;
+
+    @MockitoBean
+    private FindEventsByZoneUseCasePort findEventsByZoneUseCase;
+
+    @MockitoBean
+    private UpdateEventUseCasePort updateEventUseCase;
+
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("tester").claim("role", "ADMIN")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
     }
 
@@ -252,5 +266,57 @@ class EventControllerTest {
                         """.formatted(UUID.randomUUID()))
                 .exchange()
                 .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void findBySiteReturnsEvents() {
+        var siteId = UUID.randomUUID();
+        given(findEventsBySiteUseCase.handle(siteId)).willReturn(Flux.just(
+                eventWith(UUID.randomUUID(), EventStatus.PUBLISHED)));
+
+        webTestClient.get().uri("/api/v1/events/site/{siteId}", siteId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void findByZoneReturnsEvents() {
+        var zoneId = UUID.randomUUID();
+        given(findEventsByZoneUseCase.handle(zoneId)).willReturn(Flux.just(
+                eventWith(UUID.randomUUID(), EventStatus.PUBLISHED)));
+
+        webTestClient.get().uri("/api/v1/events/zone/{zoneId}", zoneId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void updateReturnsTheUpdatedEvent() {
+        var id = UUID.randomUUID();
+        given(updateEventUseCase.handle(any(), any(), any(), any(), anyInt(), any(), any(), any()))
+                .willReturn(Mono.just(eventWith(id, EventStatus.PUBLISHED)));
+
+        webTestClient.put().uri("/api/v1/events/{eventId}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                          "name": "Sunset Kayak Tour",
+                          "category": "Nautical",
+                          "price": 150000.00,
+                          "maxCapacity": 12,
+                          "startsAt": "2026-11-01T10:00:00Z",
+                          "endsAt": "2026-11-01T12:00:00Z",
+                          "description": "Updated description."
+                        }
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(id.toString())
+                .jsonPath("$.status").isEqualTo("PUBLISHED");
     }
 }

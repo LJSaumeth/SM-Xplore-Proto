@@ -16,6 +16,7 @@ import com.smxplore.proto.infrastructure.adapters.in.web.dto.RegisterUserRequest
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -23,7 +24,11 @@ import java.util.UUID;
 @Mapper(componentModel = "spring")
 public interface UserWebMapper {
 
-    UserResponse toResponse(User user);
+    default UserResponse toResponse(User user) {
+        var registrationStatus = user instanceof ServiceProvider provider ? provider.getRegistrationStatus() : null;
+        return new UserResponse(user.getId(), user.getFullName(), user.getEmail(), user.getPhone(),
+                user.getRole(), user.getStatus(), registrationStatus, user.getSignedUpAt());
+    }
 
     default AuthResponse toAuthResponse(LoginResult result) {
         return new AuthResponse(result.token(), "Bearer", result.expiresInSeconds(), toResponse(result.user()));
@@ -31,7 +36,15 @@ public interface UserWebMapper {
 
     GuideProfileResponse toGuideResponse(Guide guide);
 
+    @Mapping(target = "email", ignore = true)
+    @Mapping(target = "phone", ignore = true)
+    GuideProfileResponse toPublicGuideResponse(Guide guide);
+
     ServiceProviderProfileResponse toServiceProviderResponse(ServiceProvider serviceProvider);
+
+    @Mapping(target = "email", ignore = true)
+    @Mapping(target = "phone", ignore = true)
+    ServiceProviderProfileResponse toPublicServiceProviderResponse(ServiceProvider serviceProvider);
 
     default User toDomain(RegisterUserRequest request) {
         var id = UUID.randomUUID();

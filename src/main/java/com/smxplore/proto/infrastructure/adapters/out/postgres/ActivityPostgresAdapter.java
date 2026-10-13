@@ -57,4 +57,9 @@ public class ActivityPostgresAdapter implements ActivityRepositoryPort {
     public Flux<Activity> findAllBySiteId(UUID siteId) {
         return repository.findAllBySiteId(siteId).map(mapper::toDomain);
     }
+
+    @Override
+    public Flux<Activity> findAllBySiteIdIn(java.util.Collection<UUID> siteIds) {
+        return repository.findAllBySiteIdIn(siteIds).map(mapper::toDomain);
+    }
 }

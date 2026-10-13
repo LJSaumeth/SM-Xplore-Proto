@@ -1,5 +1,6 @@
 package com.smxplore.proto.domain.model.reservation;
 
+import com.smxplore.proto.domain.exceptions.reservation.DifferentProvidersInReservationException;
 import com.smxplore.proto.domain.exceptions.reservation.InvalidBookingDateException;
 import com.smxplore.proto.domain.exceptions.reservation.InvalidNumberOfPeopleException;
 import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationStatusTransitionException;
@@ -35,6 +36,9 @@ public class Reservation {
 
     @Setter
     private String notes;
+    private String code;
+    private UUID providerId;
+    private UUID guideId;
 
     public void validate() {
         validateTourist();
@@ -57,6 +61,36 @@ public class Reservation {
     public void changePrice(BigDecimal newPrice) {
         validateTotal(newPrice);
         total = newPrice;
+    }
+
+    /**
+     * The provider is fixed by the first SERVICE item of the reservation; every
+     * later item must belong to the same provider.
+     */
+    public void assignProvider(UUID providerId) {
+        if (providerId == null) {
+            return;
+        }
+        if (this.providerId != null && !this.providerId.equals(providerId)) {
+            throw new DifferentProvidersInReservationException(
+                    "All the services of a reservation must be offered by the same provider.");
+        }
+        this.providerId = providerId;
+    }
+
+    /**
+     * The guide is fixed by the first ACTIVITY item of the reservation; every
+     * later item must belong to the same guide.
+     */
+    public void assignGuide(UUID guideId) {
+        if (guideId == null) {
+            return;
+        }
+        if (this.guideId != null && !this.guideId.equals(guideId)) {
+            throw new DifferentProvidersInReservationException(
+                    "All the activities of a reservation must be offered by the same guide.");
+        }
+        this.guideId = guideId;
     }
 
     public void confirm() {

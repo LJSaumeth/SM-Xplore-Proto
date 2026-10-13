@@ -29,6 +29,7 @@ class EventUseCasesTest {
     private ConsultEventsUseCase consultEvents;
     private SearchEventsUseCase searchEvents;
     private ViewEventDetailsUseCase viewEventDetails;
+    private UpdateEventUseCase updateEvent;
 
     @BeforeEach
     void setUp() {
@@ -39,6 +40,7 @@ class EventUseCasesTest {
         consultEvents = new ConsultEventsUseCase(eventRepo);
         searchEvents = new SearchEventsUseCase(eventRepo);
         viewEventDetails = new ViewEventDetailsUseCase(eventRepo);
+        updateEvent = new UpdateEventUseCase(eventRepo);
     }
 
     private Event eventWith(UUID id, String name) {
@@ -167,5 +169,28 @@ class EventUseCasesTest {
     void shouldFailViewDetailsWhenEventDoesNotExist() {
         assertThrows(EventNotFoundException.class,
                 () -> viewEventDetails.handle(UUID.randomUUID()).block());
+    }
+
+    @Test
+    void shouldUpdateEventDetails() {
+        UUID id = UUID.randomUUID();
+        eventRepo.save(eventWith(id)).block();
+        Instant newStart = Instant.now().plusSeconds(7200);
+
+        Event updated = Objects.requireNonNull(updateEvent.handle(id, "Updated Tour", "Culture",
+                new BigDecimal("99000.00"), 20, newStart, newStart.plusSeconds(3600), "Updated").block());
+
+        assertEquals("Updated Tour", updated.getName());
+        assertEquals("Culture", updated.getCategory());
+        assertEquals(20, updated.getMaxCapacity());
+    }
+
+    @Test
+    void shouldFailUpdateWhenEventDoesNotExist() {
+        Instant startsAt = Instant.now().plusSeconds(3600);
+
+        assertThrows(EventNotFoundException.class, () -> updateEvent.handle(UUID.randomUUID(),
+                "Updated Tour", "Culture", new BigDecimal("99000.00"), 20, startsAt,
+                startsAt.plusSeconds(3600), "Updated").block());
     }
 }

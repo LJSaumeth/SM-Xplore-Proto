@@ -9,11 +9,13 @@ import com.smxplore.proto.domain.ports.usecases.activity.ChangeActivityStatusUse
 import com.smxplore.proto.domain.ports.usecases.activity.ConsultActivitiesUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByCategoryUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesBySiteUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ManageAvailabilityUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ManageSlotsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.RegisterActivityUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.UpdateActivityUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ViewActivityDetailsUseCasePort;
+import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.controller.ActivityController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ActivityWebMapperImpl;
@@ -59,6 +61,9 @@ class ActivityControllerTest {
     private FindActivitiesBySiteUseCasePort findActivitiesBySiteUseCase;
 
     @MockitoBean
+    private FindActivitiesByZoneUseCasePort findActivitiesByZoneUseCase;
+
+    @MockitoBean
     private UpdateActivityUseCasePort updateActivityUseCase;
 
     @MockitoBean
@@ -73,10 +78,14 @@ class ActivityControllerTest {
     @MockitoBean
     private ChangeActivityStatusUseCasePort changeActivityStatusUseCase;
 
+    @MockitoBean
+    private ActivityRepositoryPort activityRepository;
+
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("tester").claim("role", "ADMIN")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
     }
 
@@ -188,6 +197,31 @@ class ActivityControllerTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void findByZoneReturnsActivities() {
+        var zoneId = UUID.randomUUID();
+        given(findActivitiesByZoneUseCase.handle(zoneId)).willReturn(Flux.just(
+                activityWith(UUID.randomUUID(), ActivityStatus.DRAFT)));
+
+        webTestClient.get().uri("/api/v1/activities/zone/{zoneId}", zoneId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void cancelRejectsWhenTheGuideIsNotTheOwner() {
+        var activity = activityWith(UUID.randomUUID(), ActivityStatus.DRAFT);
+        given(activityRepository.findById(activity.getId())).willReturn(Mono.just(activity));
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "GUIDE")));
+
+        client.post().uri("/api/v1/activities/{activityId}/cancel", activity.getId())
+                .exchange()
+                .expectStatus().isForbidden();
     }
 
     @Test

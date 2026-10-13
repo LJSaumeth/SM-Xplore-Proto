@@ -2,18 +2,22 @@ package com.smxplore.proto.domain.ports.repository;
 
 import com.smxplore.proto.domain.model.zone.Zone;
 
-import java.util.Optional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.util.UUID;
 
 /**
- * Persistence contract for {@link Zone}. Implemented by an outbound adapter.
+ * Persistence contract for {@link Zone} (PostgreSQL). Implemented by an outbound adapter.
  */
 public interface IZoneRepository {
 
     /** Persists the zone (create or update) and returns the stored state. */
-    Zone save(Zone zone);
+    Mono<Zone> save(Zone zone);
 
-    Optional<Zone> findById(UUID id);
+    Mono<Zone> findById(UUID id);
 
-    boolean existsById(UUID id);
+    Mono<Boolean> existsById(UUID id);
+
+    Flux<Zone> findAll();
 }

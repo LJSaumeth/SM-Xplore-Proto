@@ -3,6 +3,7 @@ package com.smxplore.proto.infrastructure.adapters.out.mongo;
 import com.smxplore.proto.infrastructure.adapters.out.mongo.document.CommentDocument;
 import com.smxplore.proto.infrastructure.adapters.out.mongo.document.SecurityReportDocument;
 import com.smxplore.proto.infrastructure.adapters.out.mongo.document.ServiceDocument;
+import com.smxplore.proto.infrastructure.adapters.out.mongo.document.SiteDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -28,7 +29,8 @@ public class MongoIndexInitializer implements ApplicationRunner {
     private static final List<Class<?>> INDEXED_DOCUMENTS = List.of(
             SecurityReportDocument.class,
             ServiceDocument.class,
-            CommentDocument.class
+            CommentDocument.class,
+            SiteDocument.class
     );
 
     private final ReactiveMongoTemplate mongoTemplate;

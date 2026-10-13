@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS reservations (
     booked_at        TIMESTAMP WITH TIME ZONE NOT NULL,
     booked_for       TIMESTAMP WITH TIME ZONE NOT NULL,
     notes            TEXT,
+    provider_id      UUID,
+    guide_id         UUID,
+    code             VARCHAR(20),
     CONSTRAINT reservations_number_of_people_positive CHECK (number_of_people > 0),
     CONSTRAINT reservations_total_non_negative CHECK (total >= 0),
     CONSTRAINT reservations_booked_for_after_booked_at CHECK (booked_for > booked_at),
@@ -29,6 +32,16 @@ CREATE TABLE IF NOT EXISTS reservations (
 
 CREATE INDEX IF NOT EXISTS reservations_tourist_idx ON reservations (tourist_id);
 CREATE INDEX IF NOT EXISTS reservations_status_idx ON reservations (status);
+CREATE INDEX IF NOT EXISTS reservations_provider_idx ON reservations (provider_id);
+CREATE INDEX IF NOT EXISTS reservations_guide_idx ON reservations (guide_id);
+
+-- Upgrade path for databases created before the provider/guide/code columns existed.
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS provider_id UUID;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guide_id UUID;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS code VARCHAR(20);
+CREATE SEQUENCE IF NOT EXISTS reservation_code_seq;
+-- Backfill for reservations created before the readable code column existed.
+UPDATE reservations SET code = 'R-' || nextval('reservation_code_seq') WHERE code IS NULL;
 
 CREATE TABLE IF NOT EXISTS reservation_items (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,3 +152,12 @@ CREATE INDEX IF NOT EXISTS evento_sitio_idx ON evento (sitio_id);
 CREATE INDEX IF NOT EXISTS evento_name_idx ON evento (name);
 CREATE INDEX IF NOT EXISTS actividad_sitio_idx ON actividad (sitio_id);
 CREATE INDEX IF NOT EXISTS actividad_category_idx ON actividad (type);
+-- Schema for the sites & zones module (zones in PostgreSQL; sites live in MongoDB).
+-- The zone is the relational parent referenced by sites and by the catalog filters.
+
+CREATE TABLE IF NOT EXISTS zona (
+    id   uuid PRIMARY KEY,
+    name varchar(150) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS zona_name_idx ON zona (name);

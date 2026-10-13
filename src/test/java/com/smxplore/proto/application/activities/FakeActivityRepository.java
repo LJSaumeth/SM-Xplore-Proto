@@ -6,6 +6,7 @@ import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -43,5 +44,10 @@ class FakeActivityRepository implements ActivityRepositoryPort {
     @Override
     public Flux<Activity> findAllBySiteId(UUID siteId) {
         return findAll().filter(activity -> siteId.equals(activity.getSiteId()));
+    }
+
+    @Override
+    public Flux<Activity> findAllBySiteIdIn(Collection<UUID> siteIds) {
+        return findAll().filter(activity -> siteIds.contains(activity.getSiteId()));
     }
 }

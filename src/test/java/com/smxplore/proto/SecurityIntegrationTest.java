@@ -1,15 +1,23 @@
 package com.smxplore.proto;
 
 import com.smxplore.proto.domain.model.destinationmanager.DestinationManager;
+import com.smxplore.proto.domain.model.event.EventStatus;
 import com.smxplore.proto.domain.model.serviceprovider.RegistrationStatus;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
+import com.smxplore.proto.domain.model.securityreport.SecurityReportStatus;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ActivityResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.EventResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.GuideProfileResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.SecurityReportResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.SiteResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ZoneResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -161,20 +169,128 @@ class SecurityIntegrationTest {
 
     @Test
     void protectedEndpointsRequireAValidToken() {
-        webTestClient.get().uri("/api/v1/events")
-                .exchange()
-                .expectStatus().isUnauthorized();
-
         webTestClient.post().uri("/api/v1/events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(eventBody())
                 .exchange()
                 .expectStatus().isUnauthorized();
 
-        webTestClient.get().uri("/api/v1/events")
+        webTestClient.get().uri("/api/v1/reservations/tourists/{touristId}", UUID.randomUUID())
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        webTestClient.get().uri("/api/v1/reservations/tourists/{touristId}", UUID.randomUUID())
                 .headers(h -> h.setBearerAuth("not-a-real-token"))
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void publicCatalogIsOpenWithoutToken() {
+        webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/activities")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/services?status=AVAILABLE")
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void publicProfilesHideContactDataForAnonymousCallers() {
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        var providerEmail = uniqueEmail("public-provider");
+        var providerId = registerServiceProvider(providerEmail);
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        var anonymousProfile = webTestClient.get().uri("/api/v1/users/providers/{providerId}", providerId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(anonymousProfile).isNotNull();
+        assertThat(anonymousProfile.email()).isNull();
+        assertThat(anonymousProfile.phone()).isNull();
+
+        var tourist = tourist();
+        var authenticatedProfile = webTestClient.get().uri("/api/v1/users/providers/{providerId}", providerId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(authenticatedProfile).isNotNull();
+        assertThat(authenticatedProfile.email()).isEqualTo(providerEmail);
+
+        var guideEmail = uniqueEmail("public-guide");
+        var guide = webTestClient.post().uri("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"fullName": "Public Guide", "email": "%s", "phone": "%s", "password": "%s",
+                         "role": "GUIDE", "dniNumber": "%s", "dniType": "CITIZENSHIP_CARD", "license": "LIC-%s"}
+                        """.formatted(guideEmail, uniquePhone(), PASSWORD, uniqueDni(), uniqueDni()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UserResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var guideId = Objects.requireNonNull(guide).id();
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-guide", guideId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        var anonymousGuide = webTestClient.get().uri("/api/v1/users/guides/{guideId}", guideId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(GuideProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(anonymousGuide).isNotNull();
+        assertThat(anonymousGuide.email()).isNull();
+        assertThat(anonymousGuide.phone()).isNull();
+    }
+
+    @Test
+    void providerRejectionFlow() {
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+        var providerEmail = uniqueEmail("rejected-provider");
+        var providerId = registerServiceProvider(providerEmail);
+
+        var rejected = webTestClient.post().uri("/api/v1/users/{userId}/reject-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(rejected).isNotNull();
+        assertThat(rejected.registrationStatus()).isEqualTo(RegistrationStatus.REJECTED);
+
+        // rejected providers still cannot log in
+        webTestClient.post().uri("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"email": "%s", "password": "%s"}
+                        """.formatted(providerEmail, PASSWORD))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // rejecting twice conflicts
+        webTestClient.post().uri("/api/v1/users/{userId}/reject-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
@@ -396,7 +512,8 @@ class SecurityIntegrationTest {
                 .returnResult()
                 .getResponseBody();
         assertThat(pending).isNotNull();
-        assertThat(pending).anyMatch(user -> providerEmail.equals(user.email()));
+        assertThat(pending).anyMatch(user -> providerEmail.equals(user.email())
+                && user.registrationStatus() == RegistrationStatus.PENDING);
 
         var approved = webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
                 .headers(h -> h.setBearerAuth(admin))
@@ -646,6 +763,335 @@ class SecurityIntegrationTest {
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void siteZoneCatalogAndManagementFlow() {
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+        var tourist = tourist();
+
+        // catalog reads are public
+        webTestClient.get().uri("/api/v1/zones")
+                .exchange()
+                .expectStatus().isOk();
+
+        // only managers/admins can create
+        webTestClient.post().uri("/api/v1/zones")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"name": "Forbidden Zone"}
+                        """)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var zone = webTestClient.post().uri("/api/v1/zones")
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"name": "Smoke Zone"}
+                        """)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ZoneResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var zoneId = Objects.requireNonNull(zone).id();
+
+        var site = webTestClient.post().uri("/api/v1/sites")
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"zoneId": "%s", "name": "Smoke Site", "latitude": 11.24, "longitude": -74.19,
+                         "photoUrls": ["https://example.com/site.jpg"]}
+                        """.formatted(zoneId))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(SiteResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var siteId = Objects.requireNonNull(site).id();
+
+        // public reads see the created catalog
+        webTestClient.get().uri("/api/v1/sites/{siteId}", siteId)
+                .exchange()
+                .expectStatus().isOk();
+
+        var zoneSites = webTestClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/sites")
+                        .queryParam("zoneId", zoneId)
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(SiteResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(zoneSites).isNotNull();
+        assertThat(zoneSites).anyMatch(item -> siteId.equals(item.id()));
+
+        // renaming requires the manager role
+        webTestClient.patch().uri("/api/v1/zones/{zoneId}", zoneId)
+                .headers(h -> h.setBearerAuth(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"name": "Smoke Zone Renamed"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void reservationOwnershipIsEnforced() {
+        var tourist = tourist();
+        var otherTourist = tourist();
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        // tourists can only create their own reservations
+        webTestClient.post().uri("/api/v1/reservations")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"touristId": "%s", "numberOfPeople": 2, "paymentMethod": "CARD",
+                         "bookedFor": "2027-01-01T10:00:00Z"}
+                        """.formatted(otherTourist.id()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var reservation = webTestClient.post().uri("/api/v1/reservations")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"touristId": "%s", "numberOfPeople": 2, "paymentMethod": "CARD",
+                         "bookedFor": "2027-01-01T10:00:00Z"}
+                        """.formatted(tourist.id()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ReservationResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(reservation).isNotNull();
+        assertThat(reservation.code()).startsWith("R-");
+        var reservationId = reservation.id();
+
+        // the owner and the staff can read it; another tourist cannot
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}", reservationId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}", reservationId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}", reservationId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // the by-status listing is staff-only now
+        webTestClient.get().uri("/api/v1/reservations?status=PENDING")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get().uri("/api/v1/reservations?status=PENDING")
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        // another tourist cannot list this tourist's reservations
+        webTestClient.get().uri("/api/v1/reservations/tourists/{touristId}", tourist.id())
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // another tourist cannot add items to (or read the items of) someone else's reservation
+        webTestClient.post().uri("/api/v1/reservations/{reservationId}/items", reservationId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"itemId": "%s", "type": "EVENT", "price": 1000}
+                        """.formatted(UUID.randomUUID()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}/items", reservationId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}/items", reservationId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void anonymousCatalogHidesUnpublishedEvents() {
+        var manager = destinationManagerToken();
+        var tourist = tourist();
+
+        var created = webTestClient.post().uri("/api/v1/events")
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(eventBody())
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(EventResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(created).isNotNull();
+        assertThat(created.status()).isEqualTo(EventStatus.DRAFT);
+        var eventId = created.id();
+
+        // anonymous callers cannot see it yet
+        webTestClient.get().uri("/api/v1/events/{eventId}", eventId)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // the draft is filtered out of the anonymous listing
+        var anonymousList = webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(EventResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(anonymousList).isNotNull();
+        assertThat(anonymousList).noneMatch(item -> eventId.equals(item.id()));
+
+        // after publishing it becomes visible
+        webTestClient.patch().uri("/api/v1/events/{eventId}/status", eventId)
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/events/{eventId}", eventId)
+                .exchange()
+                .expectStatus().isOk();
+
+        var publishedList = webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(EventResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(publishedList).isNotNull();
+        assertThat(publishedList).anyMatch(item -> eventId.equals(item.id()));
+
+        // draft activities are hidden from anonymous callers too
+        var activity = webTestClient.post().uri("/api/v1/activities")
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"siteId": "%s", "name": "Draft Activity", "category": "Tour", "price": 1000.00,
+                         "maxCapacity": 10, "durationMinutes": 60, "startsAt": "2026-12-03T10:00:00Z",
+                         "endsAt": "2026-12-03T11:00:00Z"}
+                        """.formatted(UUID.randomUUID()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ActivityResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(activity).isNotNull();
+        var activityId = activity.id();
+
+        webTestClient.get().uri("/api/v1/activities/{activityId}", activityId)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        webTestClient.patch().uri("/api/v1/activities/{activityId}/status", activityId)
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/activities/{activityId}", activityId)
+                .exchange()
+                .expectStatus().isOk();
+
+        // only managers/admins can edit events
+        var updateBody = """
+                {"name": "Updated Event", "category": "Nautical", "price": 1200.00,
+                 "maxCapacity": 8, "startsAt": "2026-12-02T10:00:00Z", "endsAt": "2026-12-02T12:00:00Z"}
+                """;
+        webTestClient.put().uri("/api/v1/events/{eventId}", eventId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(updateBody)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.put().uri("/api/v1/events/{eventId}", eventId)
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(updateBody)
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void reportSolveIsStaffOnlyAndReporterComesFromTheToken() {
+        var tourist = tourist();
+        var otherTourist = tourist();
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        var report = webTestClient.post().uri("/api/v1/security-reports")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"text": "Reporte de prueba"}
+                        """)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(SecurityReportResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(report).isNotNull();
+        assertThat(report.user()).isNotNull();
+        assertThat(report.user().id()).isEqualTo(tourist.id());
+        var reportId = report.id();
+
+        // only the author (or staff) can change the report
+        webTestClient.patch().uri("/api/v1/security-reports/{reportId}/text", reportId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"text": "Cambio ajeno"}
+                        """)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.patch().uri("/api/v1/security-reports/{reportId}/text", reportId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"text": "Cambio propio"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+
+        // solving is staff-only
+        webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var solved = webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(SecurityReportResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(solved).isNotNull();
+        assertThat(solved.status()).isEqualTo(SecurityReportStatus.SOLVED);
     }
 
     @Test

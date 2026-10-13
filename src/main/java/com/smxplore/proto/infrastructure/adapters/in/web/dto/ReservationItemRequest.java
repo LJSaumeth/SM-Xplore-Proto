@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * El precio es opcional: para items SERVICE se toma del catálogo y el valor
- * enviado se ignora; para ACTIVITY y EVENT es obligatorio (lo valida el
- * dominio) hasta que existan sus catálogos.
+ * The price is optional: for SERVICE and ACTIVITY items it is taken from the
+ * catalog (the sent value is ignored); for EVENT it is mandatory (validated by
+ * the domain) until the event catalog exists.
  */
 public record ReservationItemRequest(
         @NotNull UUID itemId,

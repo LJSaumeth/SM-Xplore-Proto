@@ -1,5 +1,6 @@
 package com.smxplore.proto.application.reservations;
 
+import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
 import com.smxplore.proto.domain.exceptions.reservation.DifferentProvidersInReservationException;
 import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationItemException;
 import com.smxplore.proto.domain.exceptions.reservation.MixedReservationItemTypesException;
@@ -7,10 +8,12 @@ import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundExcep
 import com.smxplore.proto.domain.exceptions.reservation.TooManyReservationItemsException;
 import com.smxplore.proto.domain.exceptions.service.InvalidServiceProviderException;
 import com.smxplore.proto.domain.exceptions.service.ServiceNotFoundException;
+import com.smxplore.proto.domain.model.activity.Activity;
 import com.smxplore.proto.domain.model.reservation.Reservation;
 import com.smxplore.proto.domain.model.reservation.ReservationItem;
 import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.model.service.Service;
+import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ReservationItemRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ReservationRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
@@ -22,20 +25,23 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
- * Reglas de negocio de los items de una reserva:
+ * Business rules for the items of a reservation:
  * <ul>
- *     <li>La reserva debe existir y no estar en un estado final.</li>
- *     <li>Todos los items de una reserva deben ser del mismo tipo y hay un
- *     máximo de {@value #MAX_ITEMS_PER_RESERVATION} items por reserva.</li>
- *     <li>Los items de tipo SERVICE deben pertenecer a servicios ofrecidos por un mismo provider
- *     y su precio se toma del catálogo (el enviado por el cliente se ignora).</li>
- *     <li>Los items de tipo ACTIVITY deben pertenecer a actividades ofrecidas por un mismo provider
- *     (pendiente: integrar el catálogo de actividades de la rama aparte, ver TODO).</li>
- *     <li>Los items de tipo EVENT están limitados a uno por reserva.</li>
+ *     <li>The reservation must exist and not be in a final state.</li>
+ *     <li>All the items of a reservation must share the same type; there is a
+ *     maximum of {@value #MAX_ITEMS_PER_RESERVATION} items per reservation.</li>
+ *     <li>SERVICE items must belong to services offered by the same provider and
+ *     their price comes from the catalog (the client-sent price is ignored).</li>
+ *     <li>ACTIVITY items must belong to activities of the same guide; their price
+ *     also comes from the catalog.</li>
+ *     <li>EVENT items are limited to one per reservation.</li>
+ *     <li>The reservation remembers its provider (SERVICE items) or guide (ACTIVITY
+ *     items) so each provider/guide can list the reservations they received.</li>
  * </ul>
  */
 @RequiredArgsConstructor
@@ -46,6 +52,7 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
     private final ReservationRepositoryPort reservationRepo;
     private final ReservationItemRepositoryPort reservationItemRepo;
     private final ServiceRepositoryPort serviceRepo;
+    private final ActivityRepositoryPort activityRepo;
 
     @Override
     public Flux<ReservationItem> handle(UUID reservationId, Collection<ReservationItem> items) {
@@ -59,7 +66,9 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
                                     .flatMapMany(existing -> resolveItems(existing, prepared)
                                             .flatMapMany(resolved -> Flux.defer(() -> reservationItemRepo.saveAll(resolved))
                                                     .collectList()
-                                                    .flatMap(saved -> recalculateTotal(reservation, existing, saved)
+                                                    .flatMap(saved -> assignOwner(reservation, resolved)
+                                                            .then(Mono.defer(() -> recalculateTotal(reservation,
+                                                                    existing, saved)))
                                                             .thenReturn(saved))
                                                     .flatMapMany(Flux::fromIterable)));
                         }));
@@ -92,9 +101,9 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
     }
 
     /**
-     * Valida las reglas y resuelve el precio de los items entrantes: para los
-     * items SERVICE el precio es el del catálogo; ACTIVITY y EVENT usan el
-     * precio recibido mientras no existan sus catálogos.
+     * Validates the rules and resolves the price of the incoming items: for
+     * SERVICE and ACTIVITY items the price is the catalog's; EVENT uses the
+     * received price while its catalog does not exist.
      */
     private Mono<List<ReservationItem>> resolveItems(List<ReservationItem> existing, List<ReservationItem> incoming) {
         var incomingType = incoming.getFirst().getType();
@@ -112,8 +121,8 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
         }
         return switch (incomingType) {
             case SERVICE -> resolveServices(existing, incoming);
-            // TODO integrar el catálogo de actividades (rama aparte): provider y precio
-            case ACTIVITY, EVENT -> Mono.just(validate(incoming));
+            case ACTIVITY -> resolveActivities(existing, incoming);
+            case EVENT -> Mono.just(validate(incoming));
         };
     }
 
@@ -149,13 +158,65 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
                 });
     }
 
+    private Mono<List<ReservationItem>> resolveActivities(List<ReservationItem> existing, List<ReservationItem> incoming) {
+        var activityIds = Stream.concat(existing.stream(), incoming.stream())
+                .map(ReservationItem::getItemId)
+                .distinct()
+                .toList();
+        return Flux.fromIterable(activityIds)
+                .concatMap(activityId -> activityRepo.findById(activityId)
+                        .switchIfEmpty(Mono.error(new ActivityNotFoundException(activityId))))
+                .collectMap(Activity::getId)
+                .flatMap(activities -> {
+                    var guides = activities.values().stream()
+                            .map(Activity::getGuideId)
+                            .filter(Objects::nonNull)
+                            .distinct()
+                            .count();
+                    if (guides > 1) {
+                        return Mono.error(new DifferentProvidersInReservationException(
+                                "All the activities of a reservation must be offered by the same guide."));
+                    }
+                    var resolved = incoming.stream()
+                            .map(item -> item.toBuilder().price(activities.get(item.getItemId()).getPrice()).build())
+                            .toList();
+                    return Mono.just(validate(resolved));
+                });
+    }
+
+    /** Fixes the provider (SERVICE items) or the guide (ACTIVITY items) of the reservation. */
+    private Mono<Void> assignOwner(Reservation reservation, List<ReservationItem> items) {
+        return switch (items.getFirst().getType()) {
+            case SERVICE -> Flux.fromIterable(items)
+                    .map(ReservationItem::getItemId)
+                    .distinct()
+                    .concatMap(serviceRepo::findById)
+                    .mapNotNull(Service::getProvider)
+                    .map(provider -> provider.id())
+                    .distinct()
+                    .singleOrEmpty()
+                    .doOnNext(reservation::assignProvider)
+                    .then();
+            case ACTIVITY -> Flux.fromIterable(items)
+                    .map(ReservationItem::getItemId)
+                    .distinct()
+                    .concatMap(activityRepo::findById)
+                    .mapNotNull(Activity::getGuideId)
+                    .distinct()
+                    .singleOrEmpty()
+                    .doOnNext(reservation::assignGuide)
+                    .then();
+            case EVENT -> Mono.empty();
+        };
+    }
+
     private List<ReservationItem> validate(List<ReservationItem> items) {
         items.forEach(ReservationItem::validate);
         return items;
     }
 
     /**
-     * El total de la reserva es la suma de los precios de todos sus items.
+     * The total of the reservation is the sum of the prices of all its items.
      */
     private Mono<Void> recalculateTotal(Reservation reservation, List<ReservationItem> existing,
                                         List<ReservationItem> saved) {
