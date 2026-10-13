@@ -4,6 +4,7 @@ import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserSearchCriteria;
 import com.smxplore.proto.domain.ports.usecases.AdminDeleteUserAccountUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.ApproveServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.AssignUserRoleUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.BlockOrSuspendUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.DeleteOwnAccountUseCasePort;
@@ -22,11 +23,14 @@ import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProf
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UpdateUserProfileRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.UserWebMapper;
+import com.smxplore.proto.infrastructure.config.JwtConfiguration;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -38,6 +42,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -60,6 +65,7 @@ public class UserController {
     private final ResetUserPasswordUseCasePort resetUserPasswordUseCase;
     private final ViewGuideProfileUseCasePort viewGuideProfileUseCase;
     private final ViewServiceProviderProfileUseCasePort viewServiceProviderProfileUseCase;
+    private final ApproveServiceProviderRegistrationUseCasePort approveServiceProviderRegistrationUseCase;
     private final UserWebMapper mapper;
 
     @GetMapping("/{userId}")
@@ -69,17 +75,20 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    @Operation(summary = "Update a user profile")
+    @Operation(summary = "Update your own profile (admins may update any account)")
     public Mono<UserResponse> update(@PathVariable UUID userId,
-                                     @Valid @RequestBody UpdateUserProfileRequest request) {
+                                     @Valid @RequestBody UpdateUserProfileRequest request,
+                                     @AuthenticationPrincipal Jwt jwt) {
+        requireSelfOrAdmin(jwt, userId);
         return updateUserProfileUseCase.handle(userId, request.fullName(), request.email(), request.phone())
                 .map(mapper::toResponse);
     }
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete your own account")
-    public Mono<Void> deleteOwnAccount(@PathVariable UUID userId) {
+    @Operation(summary = "Delete your own account (admins may delete any account)")
+    public Mono<Void> deleteOwnAccount(@PathVariable UUID userId, @AuthenticationPrincipal Jwt jwt) {
+        requireSelfOrAdmin(jwt, userId);
         return deleteOwnAccountUseCase.handle(userId);
     }
 
@@ -136,5 +145,20 @@ public class UserController {
     @Operation(summary = "Get a service provider profile")
     public Mono<ServiceProviderProfileResponse> findServiceProvider(@PathVariable UUID providerId) {
         return viewServiceProviderProfileUseCase.handle(providerId).map(mapper::toServiceProviderResponse);
+    }
+
+    @PostMapping("/{userId}/approve-provider")
+    @Operation(summary = "Approve a service provider registration (admin)")
+    public Mono<ServiceProviderProfileResponse> approveServiceProvider(@PathVariable UUID userId) {
+        return approveServiceProviderRegistrationUseCase.handle(userId)
+                .map(mapper::toServiceProviderResponse);
+    }
+
+    private static void requireSelfOrAdmin(Jwt jwt, UUID userId) {
+        var isSelf = userId.toString().equals(jwt.getSubject());
+        var isAdmin = UserRole.ADMIN.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
+        if (!isSelf && !isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own account.");
+        }
     }
 }

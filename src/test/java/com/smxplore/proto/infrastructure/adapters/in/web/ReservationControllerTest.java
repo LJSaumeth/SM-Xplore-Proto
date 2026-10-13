@@ -14,6 +14,7 @@ import com.smxplore.proto.domain.ports.usecases.reservation.RegisterReservationA
 import com.smxplore.proto.domain.ports.usecases.reservation.RegisterReservationNoShowUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.RejectReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.RequestReservationCancellationUseCasePort;
+import com.smxplore.proto.infrastructure.adapters.in.web.controller.ReservationController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ReservationWebMapperImpl;
 import org.junit.jupiter.api.Test;

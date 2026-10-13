@@ -9,6 +9,7 @@ import com.smxplore.proto.domain.ports.usecases.reservation.AddReservationItemsU
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationItemUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationItemsByTypeUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationItemsUseCasePort;
+import com.smxplore.proto.infrastructure.adapters.in.web.controller.ReservationItemController;
 import com.smxplore.proto.infrastructure.adapters.in.web.error.GlobalExceptionHandler;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.ReservationItemWebMapperImpl;
 import org.junit.jupiter.api.Test;

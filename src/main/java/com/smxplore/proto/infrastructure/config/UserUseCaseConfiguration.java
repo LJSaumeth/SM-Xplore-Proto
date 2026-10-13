@@ -19,6 +19,7 @@ import com.smxplore.proto.domain.ports.repository.GuideRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ServiceProviderRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
+import com.smxplore.proto.domain.ports.security.TokenIssuerPort;
 import com.smxplore.proto.domain.ports.usecases.AdminDeleteUserAccountUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.ApproveServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.AssignUserRoleUseCasePort;
@@ -48,8 +49,9 @@ public class UserUseCaseConfiguration {
 
     @Bean
     public LoginUseCasePort loginUseCase(UserRepositoryPort userRepository,
-                                         PasswordHasherPort passwordHasher) {
-        return new LoginUseCase(userRepository, passwordHasher);
+                                         PasswordHasherPort passwordHasher,
+                                         TokenIssuerPort tokenIssuer) {
+        return new LoginUseCase(userRepository, passwordHasher, tokenIssuer);
     }
 
     @Bean

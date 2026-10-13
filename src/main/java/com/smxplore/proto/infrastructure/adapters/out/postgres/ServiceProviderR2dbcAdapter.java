@@ -25,12 +25,12 @@ public class ServiceProviderR2dbcAdapter implements ServiceProviderRepositoryPor
 
     @Override
     public Mono<ServiceProvider> findById(UUID id) {
-        return userRepository.findById(id).map(ServiceProvider.class::cast);
+        return userRepository.findById(id).ofType(ServiceProvider.class);
     }
 
     @Override
     public Mono<ServiceProvider> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(ServiceProvider.class::cast);
+        return userRepository.findByEmail(email).ofType(ServiceProvider.class);
     }
 
     @Override

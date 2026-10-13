@@ -94,4 +94,30 @@ class UserR2dbcAdapterIntegrationTest {
         assertThat(found.getRegistrationStatus()).isEqualTo(RegistrationStatus.PENDING);
         assertThat(found.getNit()).isEqualTo("900123456");
     }
+
+    @Test
+    void emailLookupsAreCaseInsensitive() {
+        var tourist = Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName("Case Test")
+                .email("case.test@example.com")
+                .phone("+573009998877")
+                .passwordHash("hashed")
+                .role(UserRole.TOURIST)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("998877665")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+        tourist.validate();
+        userRepository.save(tourist).block();
+
+        // Any casing of the input must find the account (login relies on this)
+        var byEmail = userRepository.findByEmail("Case.Test@Example.com").block();
+        assertThat(byEmail).isNotNull();
+        assertThat(byEmail.getEmail()).isEqualTo("case.test@example.com");
+
+        var exists = userRepository.existsByEmail("CASE.TEST@EXAMPLE.COM").block();
+        assertThat(exists).isTrue();
+    }
 }

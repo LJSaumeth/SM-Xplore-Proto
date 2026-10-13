@@ -61,6 +61,7 @@ import com.smxplore.proto.domain.exceptions.service.InvalidServiceRequestExcepti
 import com.smxplore.proto.domain.exceptions.service.ServiceNotFoundException;
 import com.smxplore.proto.domain.exceptions.service.TooManyExtraAttributeException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -101,7 +102,8 @@ public class GlobalExceptionHandler {
             ReservationItemsNotAllowedException.class,
             UserEmailAlreadyRegisteredException.class,
             UserPhoneAlreadyRegisteredException.class,
-            ServiceProviderRegistrationNotPendingException.class
+            ServiceProviderRegistrationNotPendingException.class,
+            DataIntegrityViolationException.class
     })
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.CONFLICT, exception.getMessage(), exchange);
