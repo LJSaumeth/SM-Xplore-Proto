@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Spring Boot **4.1.1** / Java **21** prototype for SM-Xplore (tourism platform). Gradle project, single module (`rootProject.name = "proto"`). Early-stage: only the application entrypoint exists.
+Spring Boot **4.1.1** / Java **21** prototype for SM-Xplore (tourism platform). Gradle project, single module (`rootProject.name = "proto"`). Several modules are implemented: users + auth/JWT, sites, events/activities, services, security reports and reservations.
 
 ## Commands
 
@@ -10,7 +10,7 @@ Use the Gradle wrapper; do not rely on a system Gradle install.
 - Test: `.\gradlew.bat test`
 - Run app: `.\gradlew.bat bootRun`
 - Single test: `.\gradlew.bat test --tests "com.smxplore.proto.AhorasiApplicationTests"`
-- Devtools live reload is on; `/actuator` and Prometheus metrics are exposed via actuator.
+- Devtools live reload is on; actuator exposes `/actuator/health` by default (a Prometheus registry is configured).
 
 Tests use **Testcontainers** (`TestcontainersConfiguration`) for MongoDB + PostgreSQL, so **Docker must be running**. `TestAhorasiApplication` starts the app against those containers for manual testing.
 
@@ -21,7 +21,7 @@ Tests use **Testcontainers** (`TestcontainersConfiguration`) for MongoDB + Postg
 - `domain/`: `exceptions/` (extend `RuntimeException`, descriptive names), `model/<entity>/` (subfolder per entity, validations + behavior methods live here), `ports/repository/`, `ports/usecases/`.
 - Entity relations use **UUID IDs**, never object references.
 - Use cases: one method named `handle`; name ports `INombreUseCase` or `NombreUseCasePort`.
-- `application` / `infrastructure` layers are not yet fleshed out.
+- `application` / `infrastructure`: implemented per module — use cases in `application`, web controllers/DTOs (MapStruct), persistence adapters (Postgres via R2DBC / Mongo reactive) and configuration classes in `infrastructure`.
 
 ## Naming gotchas (legacy, do not "fix" casually)
 
@@ -34,6 +34,7 @@ Tests use **Testcontainers** (`TestcontainersConfiguration`) for MongoDB + Postg
 - Lombok + MapStruct are both annotation processors; keep their `annotationProcessor` entries in `build.gradle.kts`.
 - Persistence: Spring Data **R2DBC** (PostgreSQL, Users context; schema in `src/main/resources/schema.sql`, run via `spring.sql.init`) and Spring Data **MongoDB Reactive** (services / security reports). `Users` uses joined-table inheritance (`users` + one table per role).
 - OpenAPI UI via springdoc (`springdoc-openapi-starter-webflux-ui:3.1.0`).
+- Security: stateless **JWT** (HS256, `app.security.jwt.*`; `JWT_SECRET` must be ≥ 32 bytes) with role-based authorization in `SecurityConfiguration` (single matrix). Public: auth endpoints, health and Swagger. The first admin is bootstrapped from `ADMIN_EMAIL`/`ADMIN_PASSWORD`. See the README "Security" section for the full flow and known gaps.
 
 ## Docs
 
