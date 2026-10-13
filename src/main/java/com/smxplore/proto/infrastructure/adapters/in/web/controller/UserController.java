@@ -4,6 +4,7 @@ import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserSearchCriteria;
 import com.smxplore.proto.domain.ports.usecases.AdminDeleteUserAccountUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.ApproveServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.AssignUserRoleUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.BlockOrSuspendUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.DeleteOwnAccountUseCasePort;
@@ -64,6 +65,7 @@ public class UserController {
     private final ResetUserPasswordUseCasePort resetUserPasswordUseCase;
     private final ViewGuideProfileUseCasePort viewGuideProfileUseCase;
     private final ViewServiceProviderProfileUseCasePort viewServiceProviderProfileUseCase;
+    private final ApproveServiceProviderRegistrationUseCasePort approveServiceProviderRegistrationUseCase;
     private final UserWebMapper mapper;
 
     @GetMapping("/{userId}")
@@ -143,6 +145,13 @@ public class UserController {
     @Operation(summary = "Get a service provider profile")
     public Mono<ServiceProviderProfileResponse> findServiceProvider(@PathVariable UUID providerId) {
         return viewServiceProviderProfileUseCase.handle(providerId).map(mapper::toServiceProviderResponse);
+    }
+
+    @PostMapping("/{userId}/approve-provider")
+    @Operation(summary = "Approve a service provider registration (admin)")
+    public Mono<ServiceProviderProfileResponse> approveServiceProvider(@PathVariable UUID userId) {
+        return approveServiceProviderRegistrationUseCase.handle(userId)
+                .map(mapper::toServiceProviderResponse);
     }
 
     private static void requireSelfOrAdmin(Jwt jwt, UUID userId) {

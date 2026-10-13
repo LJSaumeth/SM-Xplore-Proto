@@ -34,7 +34,7 @@ Tests use **Testcontainers** (`TestcontainersConfiguration`) for MongoDB + Postg
 - Lombok + MapStruct are both annotation processors; keep their `annotationProcessor` entries in `build.gradle.kts`.
 - Persistence: Spring Data **R2DBC** (PostgreSQL, Users context; schema in `src/main/resources/schema.sql`, run via `spring.sql.init`) and Spring Data **MongoDB Reactive** (services / security reports). `Users` uses joined-table inheritance (`users` + one table per role).
 - OpenAPI UI via springdoc (`springdoc-openapi-starter-webflux-ui:3.1.0`).
-- Security: stateless **JWT** (HS256, `app.security.jwt.*`; `JWT_SECRET` must be ≥ 32 bytes) with role-based authorization in `SecurityConfiguration` (single matrix). Public: auth endpoints, health and Swagger. The first admin is bootstrapped from `ADMIN_EMAIL`/`ADMIN_PASSWORD`. See the README "Security" section for the full flow and known gaps.
+- Security: stateless **JWT** (HS256, `app.security.jwt.*`; `JWT_SECRET` must be ≥ 32 bytes) with role-based authorization in `SecurityConfiguration` (single matrix). Public: auth endpoints, health and Swagger. The first admin is bootstrapped from `ADMIN_EMAIL`/`ADMIN_PASSWORD`; service-provider registrations are approved by admins via `POST /api/v1/users/{id}/approve-provider`. See the README "Security" section for the full flow and known gaps.
 
 ## Docs
 

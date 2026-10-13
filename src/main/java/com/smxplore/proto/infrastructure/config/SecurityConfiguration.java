@@ -104,7 +104,8 @@ public class SecurityConfiguration {
                         .hasRole(UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/users/*/role", "/api/v1/users/*/status")
                         .hasRole(UserRole.ADMIN.name())
-                        .pathMatchers(HttpMethod.POST, "/api/v1/users/*/reset-password")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/users/*/reset-password",
+                                "/api/v1/users/*/approve-provider")
                         .hasRole(UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.DELETE, "/api/v1/users/*/admin")
                         .hasRole(UserRole.ADMIN.name())

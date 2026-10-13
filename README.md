@@ -34,7 +34,10 @@ Swagger UI / docs paths.
 1. **Register** (`POST /api/v1/auth/register`): public self-registration accepts only
    `TOURIST` and `SERVICE_PROVIDER` (the latter stays `INACTIVE/PENDING` until
    approved). Other roles must be assigned by an administrator
-   (`PATCH /api/v1/users/{id}/role`).
+   (`PATCH /api/v1/users/{id}/role`). Admins list pending providers with
+   `GET /api/v1/users/search?role=SERVICE_PROVIDER&status=INACTIVE` and approve
+   them with `POST /api/v1/users/{id}/approve-provider` (the account becomes
+   `ACTIVE/APPROVED` and can then log in).
 2. **First administrator**: set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (optional
    `ADMIN_DNI_NUMBER` / `ADMIN_DNI_TYPE`); the app creates the account at startup
    when it does not exist (idempotent). The docker compose dev defaults are

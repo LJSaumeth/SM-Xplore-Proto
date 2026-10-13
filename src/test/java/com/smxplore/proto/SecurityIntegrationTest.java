@@ -1,23 +1,28 @@
 package com.smxplore.proto;
 
 import com.smxplore.proto.domain.model.destinationmanager.DestinationManager;
+import com.smxplore.proto.domain.model.serviceprovider.RegistrationStatus;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -274,6 +279,62 @@ class SecurityIntegrationTest {
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void providerApprovalFlowIsAdminOnly() {
+        // A provider self-registers (public) and lands PENDING/INACTIVE
+        var providerEmail = uniqueEmail("provider");
+        var created = webTestClient.post().uri("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"fullName": "Pending Provider", "email": "%s", "phone": "%s", "password": "%s",
+                         "role": "SERVICE_PROVIDER", "nit": "NIT-%s"}
+                        """.formatted(providerEmail, uniquePhone(), PASSWORD, uniqueDni()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UserResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var providerId = Objects.requireNonNull(created).id();
+
+        // While the registration is pending the account cannot log in
+        webTestClient.post().uri("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"email": "%s", "password": "%s"}
+                        """.formatted(providerEmail, PASSWORD))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // Only an admin can approve the registration
+        var tourist = tourist();
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+        var approved = webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(approved).isNotNull();
+        assertThat(approved.registrationStatus()).isEqualTo(RegistrationStatus.APPROVED);
+        assertThat(approved.status()).isEqualTo(UserStatus.ACTIVE);
+
+        // After approval the provider can log in with the SERVICE_PROVIDER role
+        var providerToken = login(providerEmail, PASSWORD);
+        assertThat(providerToken).isNotBlank();
+
+        // Approving twice conflicts
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
