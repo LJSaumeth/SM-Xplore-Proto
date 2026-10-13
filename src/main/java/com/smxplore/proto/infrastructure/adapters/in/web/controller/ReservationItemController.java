@@ -1,4 +1,4 @@
-package com.smxplore.proto.infrastructure.adapters.in.web;
+package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
 import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.ports.usecases.reservation.AddReservationItemUseCasePort;
@@ -6,6 +6,7 @@ import com.smxplore.proto.domain.ports.usecases.reservation.AddReservationItemsU
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationItemUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationItemsByTypeUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationItemsUseCasePort;
+import com.smxplore.proto.infrastructure.adapters.in.web.PaginationLimits;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationItemRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationItemResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationItemsRequest;
