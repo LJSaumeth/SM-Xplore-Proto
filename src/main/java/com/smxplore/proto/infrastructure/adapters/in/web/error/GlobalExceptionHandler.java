@@ -1,8 +1,10 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.error;
 
 import com.smxplore.proto.domain.exceptions.InvalidCredentialsException;
+import com.smxplore.proto.domain.exceptions.InvalidSiteException;
 import com.smxplore.proto.domain.exceptions.InvalidUserDataException;
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
+import com.smxplore.proto.domain.exceptions.InvalidZoneException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.exceptions.UserEmailAlreadyRegisteredException;
@@ -152,7 +154,9 @@ public class GlobalExceptionHandler {
             InvalidActivityNameException.class,
             InvalidActivityPriceException.class,
             InvalidActivityCapacityException.class,
-            InvalidActivityScheduleException.class
+            InvalidActivityScheduleException.class,
+            InvalidSiteException.class,
+            InvalidZoneException.class
     })
     public ResponseEntity<ApiErrorResponse> handleBadRequest(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.BAD_REQUEST, exception.getMessage(), exchange);

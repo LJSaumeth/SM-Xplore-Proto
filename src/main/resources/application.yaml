@@ -3,7 +3,7 @@ spring:
     name: ahorasi
   r2dbc:
     # el puerto 5432 es el default del servicio "postgres" de compose
-    # (ajústalo con R2DBC_URL si usas otra base de datos)
+    # (si lo cambias con POSTGRES_PORT, ajusta también R2DBC_URL para que coincidan)
     url: ${R2DBC_URL:r2dbc:postgresql://localhost:5432/ahorasi}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
