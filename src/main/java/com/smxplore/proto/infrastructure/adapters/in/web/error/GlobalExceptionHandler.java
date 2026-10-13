@@ -5,6 +5,20 @@ import com.smxplore.proto.domain.exceptions.attribute.InvalidAttributeNameExcept
 import com.smxplore.proto.domain.exceptions.attribute.InvalidAttributeValueException;
 import com.smxplore.proto.domain.exceptions.attribute.NullAttributeException;
 import com.smxplore.proto.domain.exceptions.location.InvalidLocationParamsException;
+import com.smxplore.proto.domain.exceptions.reservation.DifferentProvidersInReservationException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidBookingDateException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidNumberOfPeopleException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationItemException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationItemPriceException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationRequestException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationStatusTransitionException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationTotalException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationTouristException;
+import com.smxplore.proto.domain.exceptions.reservation.MixedReservationItemTypesException;
+import com.smxplore.proto.domain.exceptions.reservation.ReservationItemNotFoundException;
+import com.smxplore.proto.domain.exceptions.reservation.ReservationItemsNotAllowedException;
+import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundException;
+import com.smxplore.proto.domain.exceptions.reservation.TooManyReservationItemsException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidCommentException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidReportRequestException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidStatusTransitionException;
@@ -37,12 +51,25 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class})
+    @ExceptionHandler({
+            ReportNotFoundException.class,
+            ServiceNotFoundException.class,
+            ReservationNotFoundException.class,
+            ReservationItemNotFoundException.class
+    })
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.NOT_FOUND, exception.getMessage(), exchange);
     }
 
-    @ExceptionHandler({InvalidStatusTransitionException.class, AttributeAlreadyAddedException.class})
+    @ExceptionHandler({
+            InvalidStatusTransitionException.class,
+            AttributeAlreadyAddedException.class,
+            InvalidReservationStatusTransitionException.class,
+            MixedReservationItemTypesException.class,
+            TooManyReservationItemsException.class,
+            DifferentProvidersInReservationException.class,
+            ReservationItemsNotAllowedException.class
+    })
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.CONFLICT, exception.getMessage(), exchange);
     }
@@ -64,7 +91,14 @@ public class GlobalExceptionHandler {
             InvalidServiceNameException.class,
             InvalidServicePriceException.class,
             InvalidServiceProviderException.class,
-            InvalidServiceProviderNameException.class
+            InvalidServiceProviderNameException.class,
+            InvalidReservationRequestException.class,
+            InvalidReservationItemException.class,
+            InvalidBookingDateException.class,
+            InvalidNumberOfPeopleException.class,
+            InvalidReservationTotalException.class,
+            InvalidReservationTouristException.class,
+            InvalidReservationItemPriceException.class
     })
     public ResponseEntity<ApiErrorResponse> handleBadRequest(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.BAD_REQUEST, exception.getMessage(), exchange);

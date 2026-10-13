@@ -1,11 +1,13 @@
-# Levanta la app + MongoDB para probar la API desde Swagger
-# (http://localhost:8080/swagger-ui.html) o desde un cliente frontend.
+# Levanta la app + MongoDB (reportes/servicios) + PostgreSQL (reservas) para
+# probar la API desde Swagger (http://localhost:8080/swagger-ui.html) o desde
+# un cliente frontend.
 #
 # Uso:
-#   docker compose up --build      # construye la imagen y levanta todo
-#   docker compose up mongodb -d   # solo MongoDB (p. ej. para correr la app desde el IDE)
-#   docker compose logs -f app     # ver logs de la app
-#   docker compose down            # detiene todo (usa -v para borrar también los datos)
+#   docker compose up --build        # construye la imagen y levanta todo
+#   docker compose up mongodb -d     # solo MongoDB (p. ej. para correr la app desde el IDE)
+#   docker compose up postgres -d    # solo PostgreSQL
+#   docker compose logs -f app       # ver logs de la app
+#   docker compose down              # detiene todo (usa -v para borrar también los datos)
 services:
   mongodb:
     image: mongo:latest
@@ -22,6 +24,26 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: ahorasi-postgres
+    environment:
+      POSTGRES_DB: ahorasi
+      POSTGRES_USER: ahorasi
+      POSTGRES_PASSWORD: ahorasi
+    ports:
+      # 5433 por defecto para no chocar con un PostgreSQL local en 5432
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ahorasi -d ahorasi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   app:
     build:
       context: .
@@ -30,9 +52,11 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
-      # application-docker.yaml apunta a la base de datos del compose y ajusta
-      # el perfil de pruebas
+      # application-docker.yaml apunta a las bases de datos del compose y
+      # aplica schema.sql al arrancar
       SPRING_PROFILES_ACTIVE: docker
     ports:
       - "${APP_PORT:-8080}:8080"
@@ -40,3 +64,4 @@ services:
 
 volumes:
   mongodb_data:
+  postgres_data:
