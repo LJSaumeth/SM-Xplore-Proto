@@ -5,17 +5,20 @@ import com.smxplore.proto.application.activities.ChangeActivityStatusUseCase;
 import com.smxplore.proto.application.activities.ConsultActivitiesUseCase;
 import com.smxplore.proto.application.activities.FindActivitiesByCategoryUseCase;
 import com.smxplore.proto.application.activities.FindActivitiesBySiteUseCase;
+import com.smxplore.proto.application.activities.FindActivitiesByZoneUseCase;
 import com.smxplore.proto.application.activities.ManageAvailabilityUseCase;
 import com.smxplore.proto.application.activities.ManageSlotsUseCase;
 import com.smxplore.proto.application.activities.RegisterActivityUseCase;
 import com.smxplore.proto.application.activities.UpdateActivityUseCase;
 import com.smxplore.proto.application.activities.ViewActivityDetailsUseCase;
 import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
+import com.smxplore.proto.domain.ports.repository.ISiteRepository;
 import com.smxplore.proto.domain.ports.usecases.activity.CancelActivityUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ChangeActivityStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ConsultActivitiesUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByCategoryUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesBySiteUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ManageAvailabilityUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ManageSlotsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.RegisterActivityUseCasePort;
@@ -50,6 +53,12 @@ public class ActivityUseCaseConfiguration {
     @Bean
     public FindActivitiesBySiteUseCasePort findActivitiesBySiteUseCase(ActivityRepositoryPort activityRepository) {
         return new FindActivitiesBySiteUseCase(activityRepository);
+    }
+
+    @Bean
+    public FindActivitiesByZoneUseCasePort findActivitiesByZoneUseCase(ActivityRepositoryPort activityRepository,
+                                                                       ISiteRepository siteRepository) {
+        return new FindActivitiesByZoneUseCase(activityRepository, siteRepository);
     }
 
     @Bean

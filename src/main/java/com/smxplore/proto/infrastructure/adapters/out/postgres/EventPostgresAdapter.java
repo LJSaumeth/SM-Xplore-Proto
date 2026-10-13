@@ -52,4 +52,14 @@ public class EventPostgresAdapter implements EventRepositoryPort {
     public Flux<Event> searchByName(String name) {
         return repository.findByNameContainingIgnoreCase(name).map(mapper::toDomain);
     }
+
+    @Override
+    public Flux<Event> findAllBySiteId(UUID siteId) {
+        return repository.findAllBySiteId(siteId).map(mapper::toDomain);
+    }
+
+    @Override
+    public Flux<Event> findAllBySiteIdIn(java.util.Collection<UUID> siteIds) {
+        return repository.findAllBySiteIdIn(siteIds).map(mapper::toDomain);
+    }
 }

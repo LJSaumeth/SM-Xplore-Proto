@@ -5,6 +5,7 @@ import com.smxplore.proto.domain.ports.usecases.activity.ChangeActivityStatusUse
 import com.smxplore.proto.domain.ports.usecases.activity.ConsultActivitiesUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByCategoryUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesBySiteUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.activity.FindActivitiesByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ManageAvailabilityUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.ManageSlotsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.activity.RegisterActivityUseCasePort;
@@ -47,6 +48,7 @@ public class ActivityController {
     private final ConsultActivitiesUseCasePort consultActivitiesUseCase;
     private final FindActivitiesByCategoryUseCasePort findActivitiesByCategoryUseCase;
     private final FindActivitiesBySiteUseCasePort findActivitiesBySiteUseCase;
+    private final FindActivitiesByZoneUseCasePort findActivitiesByZoneUseCase;
     private final UpdateActivityUseCasePort updateActivityUseCase;
     private final ManageAvailabilityUseCasePort manageAvailabilityUseCase;
     private final ManageSlotsUseCasePort manageSlotsUseCase;
@@ -84,6 +86,12 @@ public class ActivityController {
     @Operation(summary = "List the activities of a site")
     public Flux<ActivityResponse> findBySite(@PathVariable UUID siteId) {
         return findActivitiesBySiteUseCase.handle(siteId).map(mapper::toResponse);
+    }
+
+    @GetMapping("/zone/{zoneId}")
+    @Operation(summary = "List the activities of the sites of a zone")
+    public Flux<ActivityResponse> findByZone(@PathVariable UUID zoneId) {
+        return findActivitiesByZoneUseCase.handle(zoneId).map(mapper::toResponse);
     }
 
     @PatchMapping("/{activityId}")

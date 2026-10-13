@@ -8,6 +8,8 @@ import com.smxplore.proto.domain.model.event.EventStatus;
 import com.smxplore.proto.domain.ports.usecases.event.ChangeEventStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ConsultEventsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.EstimateEventAttendanceUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.FindEventsBySiteUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.FindEventsByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.RegisterEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.SearchEventsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ViewEventDetailsUseCasePort;
@@ -58,6 +60,12 @@ class EventControllerTest {
 
     @MockitoBean
     private EstimateEventAttendanceUseCasePort estimateEventAttendanceUseCase;
+
+    @MockitoBean
+    private FindEventsBySiteUseCasePort findEventsBySiteUseCase;
+
+    @MockitoBean
+    private FindEventsByZoneUseCasePort findEventsByZoneUseCase;
 
     @Autowired
     void configureClient(WebTestClient webTestClient) {
@@ -252,5 +260,31 @@ class EventControllerTest {
                         """.formatted(UUID.randomUUID()))
                 .exchange()
                 .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void findBySiteReturnsEvents() {
+        var siteId = UUID.randomUUID();
+        given(findEventsBySiteUseCase.handle(siteId)).willReturn(Flux.just(
+                eventWith(UUID.randomUUID(), EventStatus.PUBLISHED)));
+
+        webTestClient.get().uri("/api/v1/events/site/{siteId}", siteId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
+    }
+
+    @Test
+    void findByZoneReturnsEvents() {
+        var zoneId = UUID.randomUUID();
+        given(findEventsByZoneUseCase.handle(zoneId)).willReturn(Flux.just(
+                eventWith(UUID.randomUUID(), EventStatus.PUBLISHED)));
+
+        webTestClient.get().uri("/api/v1/events/zone/{zoneId}", zoneId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1);
     }
 }

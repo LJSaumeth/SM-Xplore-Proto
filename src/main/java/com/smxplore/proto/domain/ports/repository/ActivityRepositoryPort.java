@@ -5,6 +5,7 @@ import com.smxplore.proto.domain.model.activity.Activity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Collection;
 import java.util.UUID;
 
 public interface ActivityRepositoryPort {
@@ -20,4 +21,6 @@ public interface ActivityRepositoryPort {
     Flux<Activity> findAllByCategory(String category);
 
     Flux<Activity> findAllBySiteId(UUID siteId);
+
+    Flux<Activity> findAllBySiteIdIn(Collection<UUID> siteIds);
 }

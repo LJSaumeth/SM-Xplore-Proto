@@ -3,6 +3,8 @@ package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 import com.smxplore.proto.domain.ports.usecases.event.ChangeEventStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ConsultEventsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.EstimateEventAttendanceUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.FindEventsBySiteUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.event.FindEventsByZoneUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.RegisterEventUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.SearchEventsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ViewEventDetailsUseCasePort;
@@ -42,6 +44,8 @@ public class EventController {
     private final SearchEventsUseCasePort searchEventsUseCase;
     private final ChangeEventStatusUseCasePort changeEventStatusUseCase;
     private final EstimateEventAttendanceUseCasePort estimateEventAttendanceUseCase;
+    private final FindEventsBySiteUseCasePort findEventsBySiteUseCase;
+    private final FindEventsByZoneUseCasePort findEventsByZoneUseCase;
     private final EventWebMapper mapper;
 
     @PostMapping
@@ -83,5 +87,17 @@ public class EventController {
                                                   @Valid @RequestBody EstimateAttendanceRequest request) {
         return estimateEventAttendanceUseCase.handle(eventId, request.expectedAttendance())
                 .map(mapper::toResponse);
+    }
+
+    @GetMapping("/site/{siteId}")
+    @Operation(summary = "List the events of a site")
+    public Flux<EventResponse> findBySite(@PathVariable UUID siteId) {
+        return findEventsBySiteUseCase.handle(siteId).map(mapper::toResponse);
+    }
+
+    @GetMapping("/zone/{zoneId}")
+    @Operation(summary = "List the events of the sites of a zone")
+    public Flux<EventResponse> findByZone(@PathVariable UUID zoneId) {
+        return findEventsByZoneUseCase.handle(zoneId).map(mapper::toResponse);
     }
 }
