@@ -23,18 +23,18 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:18
+    image: postgres:latest
     container_name: ahorasi-postgres
-    environment:
-      POSTGRES_DB: ahorasi
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ahorasi}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ahorasi"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ahorasi}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,9 +52,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # application-docker.yaml apunta a la base de datos del compose y ajusta
+      # application-docker.yaml apunta a las bases de datos del compose y ajusta
       # el perfil de pruebas
       SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_DB: ${POSTGRES_DB:-ahorasi}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "${APP_PORT:-8080}:8080"
     restart: unless-stopped

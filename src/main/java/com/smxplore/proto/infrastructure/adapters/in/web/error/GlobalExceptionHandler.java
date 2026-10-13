@@ -1,5 +1,13 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.error;
 
+import com.smxplore.proto.domain.exceptions.InvalidCredentialsException;
+import com.smxplore.proto.domain.exceptions.InvalidUserDataException;
+import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
+import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
+import com.smxplore.proto.domain.exceptions.UserEmailAlreadyRegisteredException;
+import com.smxplore.proto.domain.exceptions.UserNotFoundException;
+import com.smxplore.proto.domain.exceptions.UserPhoneAlreadyRegisteredException;
 import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
 import com.smxplore.proto.domain.exceptions.activity.InvalidActivityCapacityException;
 import com.smxplore.proto.domain.exceptions.activity.InvalidActivityNameException;
@@ -52,16 +60,34 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class, UserNotFoundException.class})
     @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class,
             EventNotFoundException.class, ActivityNotFoundException.class})
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.NOT_FOUND, exception.getMessage(), exchange);
     }
 
+    @ExceptionHandler({
+            InvalidStatusTransitionException.class,
+            AttributeAlreadyAddedException.class,
+            UserEmailAlreadyRegisteredException.class,
+            UserPhoneAlreadyRegisteredException.class,
+            ServiceProviderRegistrationNotPendingException.class
+    })
     @ExceptionHandler({InvalidStatusTransitionException.class, AttributeAlreadyAddedException.class,
             InvalidEventStatusTransitionException.class, InvalidActivityStatusTransitionException.class})
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.CONFLICT, exception.getMessage(), exchange);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthorized(RuntimeException exception, ServerWebExchange exchange) {
+        return build(HttpStatus.UNAUTHORIZED, exception.getMessage(), exchange);
+    }
+
+    @ExceptionHandler(UserAccountNotActiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbidden(RuntimeException exception, ServerWebExchange exchange) {
+        return build(HttpStatus.FORBIDDEN, exception.getMessage(), exchange);
     }
 
     @ExceptionHandler({
@@ -82,6 +108,8 @@ public class GlobalExceptionHandler {
             InvalidServicePriceException.class,
             InvalidServiceProviderException.class,
             InvalidServiceProviderNameException.class,
+            InvalidUserDataException.class,
+            InvalidUserRoleException.class
             InvalidEventRequestException.class,
             InvalidEventNameException.class,
             InvalidEventPriceException.class,

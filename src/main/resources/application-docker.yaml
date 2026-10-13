@@ -4,3 +4,5 @@ spring:
     uri: ${MONGODB_URI:mongodb://mongodb:27017/ahorasi}
   r2dbc:
     url: ${R2DBC_URL:r2dbc:postgresql://postgres:5432/ahorasi}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
