@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono;
 
 public interface RegisterUserUseCasePort {
 
-    Mono<User> handle(User user);
+    Mono<User> handle(User user, String rawPassword);
 }

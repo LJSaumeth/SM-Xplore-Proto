@@ -6,5 +6,5 @@ import java.util.UUID;
 
 public interface ResetUserPasswordUseCasePort {
 
-    Mono<Void> handle(UUID userId, String newPasswordHash);
+    Mono<Void> handle(UUID userId, String rawPassword);
 }

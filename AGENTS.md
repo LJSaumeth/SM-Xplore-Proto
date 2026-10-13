@@ -32,8 +32,8 @@ Tests use **Testcontainers** (`TestcontainersConfiguration`) for MongoDB + Postg
 
 - Java 21 toolchain is pinned; `settings.gradle.kts` uses `foojay-resolver-convention` 1.0.0 (Gradle 9 requires 1.0.0) so Gradle auto-downloads JDK 21. A local JDK 21 is not required, but the first build needs network access.
 - Lombok + MapStruct are both annotation processors; keep their `annotationProcessor` entries in `build.gradle.kts`.
-- Persistence: Spring Data JPA (PostgreSQL) and Spring Data MongoDB together. `application.yaml` currently has no datasource config (supplied by Testcontainers in tests).
-- OpenAPI UI via springdoc (`springdoc-openapi-starter-webmvc-ui:3.1.0`).
+- Persistence: Spring Data **R2DBC** (PostgreSQL, Users context; schema in `src/main/resources/schema.sql`, run via `spring.sql.init`) and Spring Data **MongoDB Reactive** (services / security reports). `Users` uses joined-table inheritance (`users` + one table per role).
+- OpenAPI UI via springdoc (`springdoc-openapi-starter-webflux-ui:3.1.0`).
 
 ## Docs
 

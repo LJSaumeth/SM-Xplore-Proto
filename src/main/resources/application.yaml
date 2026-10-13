@@ -1,6 +1,13 @@
 spring:
   application:
     name: ahorasi
+  r2dbc:
+    url: ${R2DBC_URL:r2dbc:postgresql://localhost:5432/ahorasi}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+  sql:
+    init:
+      mode: always
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/ahorasi}
     representation:

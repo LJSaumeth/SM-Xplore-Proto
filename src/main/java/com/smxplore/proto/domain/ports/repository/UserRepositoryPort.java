@@ -1,13 +1,14 @@
 package com.smxplore.proto.domain.ports.repository;
 
 import com.smxplore.proto.domain.model.user.User;
+import com.smxplore.proto.domain.model.user.UserRole;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-public interface UserRepository {
+public interface UserRepositoryPort {
 
     Mono<User> save(User user);
 
@@ -24,6 +25,8 @@ public interface UserRepository {
     Flux<User> findAll();
 
     Flux<User> search(UserSearchCriteria criteria);
+
+    Mono<Void> updateRole(UUID id, UserRole newRole);
 
     Mono<Void> deleteById(UUID id);
 }

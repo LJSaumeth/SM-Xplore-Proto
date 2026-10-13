@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-public interface UserTypeRepository<T extends User> {
+public interface UserTypeRepositoryPort<T extends User> {
 
     Mono<T> save(T user);
 
