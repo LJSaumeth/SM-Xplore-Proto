@@ -1,9 +1,9 @@
-# Levanta la app + MongoDB para probar la API desde Swagger
+# Levanta la app + MongoDB + PostgreSQL para probar la API desde Swagger
 # (http://localhost:8080/swagger-ui.html) o desde un cliente frontend.
 #
 # Uso:
-#   docker compose up --build      # construye la imagen y levanta todo
-#   docker compose up mongodb -d   # solo MongoDB (p. ej. para correr la app desde el IDE)
+#   docker compose up --build                # construye la imagen y levanta todo
+#   docker compose up mongodb postgres -d    # solo las bases (p. ej. para correr la app desde el IDE)
 #   docker compose logs -f app     # ver logs de la app
 #   docker compose down            # detiene todo (usa -v para borrar también los datos)
 services:
@@ -22,6 +22,25 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  postgres:
+    image: postgres:18
+    container_name: ahorasi-postgres
+    environment:
+      POSTGRES_DB: ahorasi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ahorasi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   app:
     build:
       context: .
@@ -29,6 +48,8 @@ services:
     container_name: ahorasi-app
     depends_on:
       mongodb:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     environment:
       # application-docker.yaml apunta a la base de datos del compose y ajusta
@@ -40,3 +61,4 @@ services:
 
 volumes:
   mongodb_data:
+  postgres_data:
