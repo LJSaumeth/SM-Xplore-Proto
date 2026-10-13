@@ -4,6 +4,8 @@ import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserSearchCriteria;
 import com.smxplore.proto.domain.ports.usecases.AdminDeleteUserAccountUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.ApproveDestinationManagerRegistrationUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.ApproveGuideRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.ApproveServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.AssignUserRoleUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.BlockOrSuspendUserUseCasePort;
@@ -66,11 +68,14 @@ public class UserController {
     private final ViewGuideProfileUseCasePort viewGuideProfileUseCase;
     private final ViewServiceProviderProfileUseCasePort viewServiceProviderProfileUseCase;
     private final ApproveServiceProviderRegistrationUseCasePort approveServiceProviderRegistrationUseCase;
+    private final ApproveGuideRegistrationUseCasePort approveGuideRegistrationUseCase;
+    private final ApproveDestinationManagerRegistrationUseCasePort approveDestinationManagerRegistrationUseCase;
     private final UserWebMapper mapper;
 
     @GetMapping("/{userId}")
-    @Operation(summary = "Get a user profile by id")
-    public Mono<UserResponse> findOne(@PathVariable UUID userId) {
+    @Operation(summary = "Get your own profile (admins may read any account)")
+    public Mono<UserResponse> findOne(@PathVariable UUID userId, @AuthenticationPrincipal Jwt jwt) {
+        requireSelfOrAdmin(jwt, userId);
         return getUserProfileUseCase.handle(userId).map(mapper::toResponse);
     }
 
@@ -89,6 +94,7 @@ public class UserController {
     @Operation(summary = "Delete your own account (admins may delete any account)")
     public Mono<Void> deleteOwnAccount(@PathVariable UUID userId, @AuthenticationPrincipal Jwt jwt) {
         requireSelfOrAdmin(jwt, userId);
+        requireNotSelfAdminDeletion(jwt, userId);
         return deleteOwnAccountUseCase.handle(userId);
     }
 
@@ -114,7 +120,7 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}/status")
-    @Operation(summary = "Block or suspend a user account")
+    @Operation(summary = "Change a user account status (activate, block or suspend)")
     public Mono<UserResponse> changeStatus(@PathVariable UUID userId,
                                            @Valid @RequestBody BlockUserRequest request) {
         return blockOrSuspendUserUseCase.handle(userId, request.status()).map(mapper::toResponse);
@@ -123,7 +129,8 @@ public class UserController {
     @DeleteMapping("/{userId}/admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a user account (admin)")
-    public Mono<Void> adminDelete(@PathVariable UUID userId) {
+    public Mono<Void> adminDelete(@PathVariable UUID userId, @AuthenticationPrincipal Jwt jwt) {
+        requireNotSelfAdminDeletion(jwt, userId);
         return adminDeleteUserAccountUseCase.handle(userId);
     }
 
@@ -154,11 +161,32 @@ public class UserController {
                 .map(mapper::toServiceProviderResponse);
     }
 
+    @PostMapping("/{userId}/approve-guide")
+    @Operation(summary = "Approve a guide registration (admin)")
+    public Mono<GuideProfileResponse> approveGuide(@PathVariable UUID userId) {
+        return approveGuideRegistrationUseCase.handle(userId).map(mapper::toGuideResponse);
+    }
+
+    @PostMapping("/{userId}/approve-manager")
+    @Operation(summary = "Approve a destination manager registration (admin)")
+    public Mono<UserResponse> approveManager(@PathVariable UUID userId) {
+        return approveDestinationManagerRegistrationUseCase.handle(userId).map(mapper::toResponse);
+    }
+
     private static void requireSelfOrAdmin(Jwt jwt, UUID userId) {
         var isSelf = userId.toString().equals(jwt.getSubject());
         var isAdmin = UserRole.ADMIN.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
         if (!isSelf && !isAdmin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own account.");
+        }
+    }
+
+    private static void requireNotSelfAdminDeletion(Jwt jwt, UUID userId) {
+        var isSelf = userId.toString().equals(jwt.getSubject());
+        var isAdmin = UserRole.ADMIN.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
+        if (isSelf && isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Administrators cannot delete their own account; ask another administrator.");
         }
     }
 }

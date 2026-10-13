@@ -1,5 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.error;
 
+import com.smxplore.proto.domain.exceptions.DestinationManagerRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.GuideRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.InvalidCredentialsException;
 import com.smxplore.proto.domain.exceptions.InvalidSiteException;
 import com.smxplore.proto.domain.exceptions.InvalidUserDataException;
@@ -103,6 +105,8 @@ public class GlobalExceptionHandler {
             UserEmailAlreadyRegisteredException.class,
             UserPhoneAlreadyRegisteredException.class,
             ServiceProviderRegistrationNotPendingException.class,
+            GuideRegistrationNotPendingException.class,
+            DestinationManagerRegistrationNotPendingException.class,
             DataIntegrityViolationException.class
     })
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {

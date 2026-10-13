@@ -8,6 +8,9 @@ import com.smxplore.proto.domain.model.tourist.Tourist;
 import com.smxplore.proto.domain.model.user.DniType;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
+import com.smxplore.proto.domain.ports.repository.AdminRepositoryPort;
+import com.smxplore.proto.domain.ports.repository.DestinationManagerRepositoryPort;
+import com.smxplore.proto.domain.ports.repository.GuideRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.TouristRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.UserSearchCriteria;
@@ -29,6 +32,15 @@ class UserR2dbcAdapterIntegrationTest {
 
     @Autowired
     private TouristRepositoryPort touristRepository;
+
+    @Autowired
+    private GuideRepositoryPort guideRepository;
+
+    @Autowired
+    private AdminRepositoryPort adminRepository;
+
+    @Autowired
+    private DestinationManagerRepositoryPort destinationManagerRepository;
 
     @Test
     void touristRoundTripKeepsUserAndSubtypeData() {
@@ -119,5 +131,28 @@ class UserR2dbcAdapterIntegrationTest {
 
         var exists = userRepository.existsByEmail("CASE.TEST@EXAMPLE.COM").block();
         assertThat(exists).isTrue();
+    }
+
+    @Test
+    void wrongRoleLookupsReturnEmptyInsteadOfThrowing() {
+        var tourist = Tourist.builder()
+                .id(UUID.randomUUID())
+                .fullName("Wrong Role")
+                .email("wrong.role@example.com")
+                .phone("+573001230000")
+                .passwordHash("hashed")
+                .role(UserRole.TOURIST)
+                .status(UserStatus.ACTIVE)
+                .signedUpAt(Instant.now())
+                .dniNumber("102030405")
+                .dniType(DniType.CITIZENSHIP_CARD)
+                .build();
+        tourist.validate();
+        userRepository.save(tourist).block();
+
+        assertThat(guideRepository.findById(tourist.getId()).block()).isNull();
+        assertThat(adminRepository.findById(tourist.getId()).block()).isNull();
+        assertThat(destinationManagerRepository.findById(tourist.getId()).block()).isNull();
+        assertThat(guideRepository.findByEmail("wrong.role@example.com").block()).isNull();
     }
 }

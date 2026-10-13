@@ -17,8 +17,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class RegisterUserUseCase implements RegisterUserUseCasePort {
 
-    /** Roles a visitor can pick during public self-registration. */
-    private static final Set<UserRole> SELF_REGISTRABLE_ROLES = Set.of(UserRole.TOURIST, UserRole.SERVICE_PROVIDER);
+    /** Roles a visitor can pick during public self-registration; they stay INACTIVE until an admin approves them. */
+    private static final Set<UserRole> SELF_REGISTRABLE_ROLES = Set.of(UserRole.TOURIST, UserRole.SERVICE_PROVIDER,
+            UserRole.GUIDE, UserRole.DESTINATION_MANAGER);
 
     private final UserRepositoryPort userRepository;
     private final PasswordHasherPort passwordHasher;

@@ -1,9 +1,11 @@
 package com.smxplore.proto.domain.model.guide;
 
+import com.smxplore.proto.domain.exceptions.GuideRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
 import com.smxplore.proto.domain.model.user.DniType;
 import com.smxplore.proto.domain.model.user.User;
 import com.smxplore.proto.domain.model.user.UserRole;
+import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.model.user.UserValidation;
 
 import lombok.Getter;
@@ -33,5 +35,12 @@ public class Guide extends User {
 
     public void updateOperationDate(LocalDate startOperationDate) {
         this.startOperationDate = UserValidation.requireNonNull(startOperationDate, "startOperationDate");
+    }
+
+    public void approveRegistration() {
+        if (getStatus() != UserStatus.INACTIVE) {
+            throw new GuideRegistrationNotPendingException(getId());
+        }
+        activate();
     }
 }

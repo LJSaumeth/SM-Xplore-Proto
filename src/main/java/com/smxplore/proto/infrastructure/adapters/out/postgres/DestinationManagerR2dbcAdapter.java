@@ -25,12 +25,12 @@ public class DestinationManagerR2dbcAdapter implements DestinationManagerReposit
 
     @Override
     public Mono<DestinationManager> findById(UUID id) {
-        return userRepository.findById(id).map(DestinationManager.class::cast);
+        return userRepository.findById(id).ofType(DestinationManager.class);
     }
 
     @Override
     public Mono<DestinationManager> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(DestinationManager.class::cast);
+        return userRepository.findByEmail(email).ofType(DestinationManager.class);
     }
 
     @Override

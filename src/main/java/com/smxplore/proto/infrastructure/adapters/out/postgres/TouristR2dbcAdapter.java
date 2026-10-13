@@ -25,12 +25,12 @@ public class TouristR2dbcAdapter implements TouristRepositoryPort {
 
     @Override
     public Mono<Tourist> findById(UUID id) {
-        return userRepository.findById(id).map(Tourist.class::cast);
+        return userRepository.findById(id).ofType(Tourist.class);
     }
 
     @Override
     public Mono<Tourist> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(Tourist.class::cast);
+        return userRepository.findByEmail(email).ofType(Tourist.class);
     }
 
     @Override
