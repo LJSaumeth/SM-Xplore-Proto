@@ -77,12 +77,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             ReportNotFoundException.class,
             ServiceNotFoundException.class,
+            UserNotFoundException.class,
             ReservationNotFoundException.class,
-            ReservationItemNotFoundException.class
+            ReservationItemNotFoundException.class,
+            EventNotFoundException.class,
+            ActivityNotFoundException.class
     })
-    @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class, UserNotFoundException.class})
-    @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class,
-            EventNotFoundException.class, ActivityNotFoundException.class})
     public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.NOT_FOUND, exception.getMessage(), exchange);
     }
@@ -90,18 +90,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             InvalidStatusTransitionException.class,
             AttributeAlreadyAddedException.class,
+            InvalidEventStatusTransitionException.class,
+            InvalidActivityStatusTransitionException.class,
             InvalidReservationStatusTransitionException.class,
             MixedReservationItemTypesException.class,
             TooManyReservationItemsException.class,
             DifferentProvidersInReservationException.class,
-            ReservationItemsNotAllowedException.class
-    })
+            ReservationItemsNotAllowedException.class,
             UserEmailAlreadyRegisteredException.class,
             UserPhoneAlreadyRegisteredException.class,
             ServiceProviderRegistrationNotPendingException.class
     })
-    @ExceptionHandler({InvalidStatusTransitionException.class, AttributeAlreadyAddedException.class,
-            InvalidEventStatusTransitionException.class, InvalidActivityStatusTransitionException.class})
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.CONFLICT, exception.getMessage(), exchange);
     }
@@ -140,9 +139,9 @@ public class GlobalExceptionHandler {
             InvalidNumberOfPeopleException.class,
             InvalidReservationTotalException.class,
             InvalidReservationTouristException.class,
-            InvalidReservationItemPriceException.class
+            InvalidReservationItemPriceException.class,
             InvalidUserDataException.class,
-            InvalidUserRoleException.class
+            InvalidUserRoleException.class,
             InvalidEventRequestException.class,
             InvalidEventNameException.class,
             InvalidEventPriceException.class,
