@@ -2,12 +2,17 @@ spring:
   application:
     name: ahorasi
   r2dbc:
+    # el puerto 5432 es el default del servicio "postgres" de compose
+    # (si lo cambias con POSTGRES_PORT, ajusta también R2DBC_URL para que coincidan)
     url: ${R2DBC_URL:r2dbc:postgresql://localhost:5432/ahorasi}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
   sql:
     init:
+      # schema.sql es idempotente; en producción conviene migrarlo a una
+      # herramienta de migraciones versionadas
       mode: always
+      schema-locations: classpath:schema.sql
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/ahorasi}
     representation:
@@ -18,15 +23,3 @@ spring:
       auto-index-creation: false
       representation:
         big-decimal: decimal128
-  r2dbc:
-    # el puerto 5433 es el que publica el servicio "postgres" de compose
-    # (ajústalo con R2DBC_URL si usas otra base de datos)
-    url: ${R2DBC_URL:r2dbc:postgresql://localhost:5433/ahorasi}
-    username: ${POSTGRES_USER:ahorasi}
-    password: ${POSTGRES_PASSWORD:ahorasi}
-  sql:
-    init:
-      # schema.sql es idempotente; en producción conviene migrarlo a una
-      # herramienta de migraciones versionadas
-      mode: always
-      schema-locations: classpath:schema.sql
