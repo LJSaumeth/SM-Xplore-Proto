@@ -1,9 +1,12 @@
 package com.smxplore.proto.domain.model.serviceprovider;
 
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
+import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotApprovedException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.model.user.User;
 import com.smxplore.proto.domain.model.user.UserRole;
+import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.model.user.UserValidation;
 
 import lombok.Getter;
@@ -45,6 +48,9 @@ public class ServiceProvider extends User {
 
     public void approveRegistration() {
         ensureRegistrationIsPending();
+        if (getStatus() == UserStatus.BLOCKED || getStatus() == UserStatus.SUSPENDED) {
+            throw new UserAccountNotActiveException(getId(), getStatus());
+        }
         this.registrationStatus = RegistrationStatus.APPROVED;
         this.activate();
     }
@@ -52,6 +58,14 @@ public class ServiceProvider extends User {
     public void rejectRegistration() {
         ensureRegistrationIsPending();
         this.registrationStatus = RegistrationStatus.REJECTED;
+    }
+
+    @Override
+    public void ensureActive() {
+        super.ensureActive();
+        if (registrationStatus != RegistrationStatus.APPROVED) {
+            throw new ServiceProviderRegistrationNotApprovedException(getId());
+        }
     }
 
     public boolean isRegistrationApproved() {

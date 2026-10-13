@@ -25,12 +25,12 @@ public class AdminR2dbcAdapter implements AdminRepositoryPort {
 
     @Override
     public Mono<Admin> findById(UUID id) {
-        return userRepository.findById(id).map(Admin.class::cast);
+        return userRepository.findById(id).ofType(Admin.class);
     }
 
     @Override
     public Mono<Admin> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(Admin.class::cast);
+        return userRepository.findByEmail(email).ofType(Admin.class);
     }
 
     @Override

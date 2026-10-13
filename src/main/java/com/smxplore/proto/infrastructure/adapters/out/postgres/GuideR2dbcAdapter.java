@@ -25,12 +25,12 @@ public class GuideR2dbcAdapter implements GuideRepositoryPort {
 
     @Override
     public Mono<Guide> findById(UUID id) {
-        return userRepository.findById(id).map(Guide.class::cast);
+        return userRepository.findById(id).ofType(Guide.class);
     }
 
     @Override
     public Mono<Guide> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(Guide.class::cast);
+        return userRepository.findByEmail(email).ofType(Guide.class);
     }
 
     @Override

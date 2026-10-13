@@ -39,11 +39,6 @@ public abstract class User {
         validate();
     }
 
-    public void changeRole(UserRole newRole) {
-        this.role = newRole;
-        validate();
-    }
-
     public void changePasswordHash(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         validate();

@@ -2,6 +2,7 @@ package com.smxplore.proto.application.users;
 
 import com.smxplore.proto.domain.exceptions.UserNotFoundException;
 import com.smxplore.proto.domain.model.serviceprovider.ServiceProvider;
+import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.ServiceProviderRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.ViewServiceProviderProfileUseCasePort;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ public class ViewServiceProviderProfileUseCase implements ViewServiceProviderPro
     @Override
     public Mono<ServiceProvider> handle(UUID serviceProviderId) {
         return serviceProviderRepository.findById(serviceProviderId)
+                .filter(provider -> provider.getStatus() == UserStatus.ACTIVE
+                        && provider.isRegistrationApproved())
                 .switchIfEmpty(Mono.error(new UserNotFoundException(serviceProviderId)));
     }
 }

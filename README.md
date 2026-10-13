@@ -31,13 +31,14 @@ All endpoints require a **JWT Bearer token** except `/api/v1/auth/register`,
 `/api/v1/auth/login`, `/api/v1/auth/recover-password`, `/actuator/health` and the
 Swagger UI / docs paths.
 
-1. **Register** (`POST /api/v1/auth/register`): public self-registration accepts only
-   `TOURIST` and `SERVICE_PROVIDER` (the latter stays `INACTIVE/PENDING` until
-   approved). Other roles must be assigned by an administrator
-   (`PATCH /api/v1/users/{id}/role`). Admins list pending providers with
-   `GET /api/v1/users/search?role=SERVICE_PROVIDER&status=INACTIVE` and approve
-   them with `POST /api/v1/users/{id}/approve-provider` (the account becomes
-   `ACTIVE/APPROVED` and can then log in).
+1. **Register** (`POST /api/v1/auth/register`): public self-registration accepts
+   `TOURIST`, `SERVICE_PROVIDER`, `GUIDE` and `DESTINATION_MANAGER`; the latter
+   three stay `INACTIVE` until an administrator approves them
+   (`POST /api/v1/users/{id}/approve-provider`, `/approve-guide`, `/approve-manager`).
+   Pending registrations are listed with
+   `GET /api/v1/users/search?role=<ROLE>&status=INACTIVE`. Changing a user's role
+   is not supported (each role has its own profile data): accounts must be created
+   with the role they need. Only `ADMIN` cannot self-register (bootstrap only).
 2. **First administrator**: set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (optional
    `ADMIN_DNI_NUMBER` / `ADMIN_DNI_TYPE`); the app creates the account at startup
    when it does not exist (idempotent). The docker compose dev defaults are
@@ -55,15 +56,19 @@ Swagger UI / docs paths.
 ### Security notes / known gaps
 
 - The chain enforces **roles, not resource ownership**, except for the profile
-  endpoints (`PUT`/`DELETE /api/v1/users/{id}` are self-or-admin). Cross-user
+  endpoints (`GET`/`PUT`/`DELETE /api/v1/users/{id}` are self-or-admin). Cross-user
   ownership checks for reservations, services and security reports are pending —
   tracked as follow-ups with each module owner.
-- `GET /api/v1/users/{id}` stays readable by any authenticated account (it
-  exposes profile fields such as email/phone) — pending a product decision:
-  restrict it to self-or-admin or return a slimmer public projection.
-- Role reassignment (`PATCH /api/v1/users/{id}/role`) updates only the accounts
-  table; a cross-subtype change can leave the account unable to log in
-  (users-module follow-up).
+- Public profiles (`GET /api/v1/users/guides/{id}`, `/users/providers/{id}`) only
+  expose active (approved) accounts, but their contact data (email/phone) remains
+  visible to any authenticated user — pending a product decision.
+- Role changes are rejected (400): each role has its own profile data, so an
+  account must be created with the role it needs (see the `approve-*` flows).
+- Registration **reject** flows are not exposed yet (the domain supports rejecting
+  provider registrations); blocked or suspended accounts can be reactivated by an
+  admin with `PATCH /api/v1/users/{id}/status` (`ACTIVE`). Pending (`INACTIVE`)
+  accounts cannot be activated directly — they must go through the `approve-*`
+  endpoints, and a provider can only log in once its registration is `APPROVED`.
 - No refresh tokens and no revocation: a token stays valid until `exp`
   (60 minutes by default, `JWT_EXPIRATION_MINUTES`); blocking a user does not
   invalidate tokens already issued.

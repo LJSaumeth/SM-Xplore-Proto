@@ -1,6 +1,8 @@
 package com.smxplore.proto.infrastructure.config;
 
 import com.smxplore.proto.application.users.AdminDeleteUserAccountUseCase;
+import com.smxplore.proto.application.users.ApproveDestinationManagerRegistrationUseCase;
+import com.smxplore.proto.application.users.ApproveGuideRegistrationUseCase;
 import com.smxplore.proto.application.users.ApproveServiceProviderRegistrationUseCase;
 import com.smxplore.proto.application.users.AssignUserRoleUseCase;
 import com.smxplore.proto.application.users.BlockOrSuspendUserUseCase;
@@ -15,12 +17,15 @@ import com.smxplore.proto.application.users.SearchUserUseCase;
 import com.smxplore.proto.application.users.UpdateUserProfileUseCase;
 import com.smxplore.proto.application.users.ViewGuideProfileUseCase;
 import com.smxplore.proto.application.users.ViewServiceProviderProfileUseCase;
+import com.smxplore.proto.domain.ports.repository.DestinationManagerRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.GuideRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ServiceProviderRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
 import com.smxplore.proto.domain.ports.security.TokenIssuerPort;
 import com.smxplore.proto.domain.ports.usecases.AdminDeleteUserAccountUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.ApproveDestinationManagerRegistrationUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.ApproveGuideRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.ApproveServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.AssignUserRoleUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.BlockOrSuspendUserUseCasePort;
@@ -78,6 +83,17 @@ public class UserUseCaseConfiguration {
     public ApproveServiceProviderRegistrationUseCasePort approveServiceProviderRegistrationUseCase(
             ServiceProviderRepositoryPort serviceProviderRepository) {
         return new ApproveServiceProviderRegistrationUseCase(serviceProviderRepository);
+    }
+
+    @Bean
+    public ApproveGuideRegistrationUseCasePort approveGuideRegistrationUseCase(GuideRepositoryPort guideRepository) {
+        return new ApproveGuideRegistrationUseCase(guideRepository);
+    }
+
+    @Bean
+    public ApproveDestinationManagerRegistrationUseCasePort approveDestinationManagerRegistrationUseCase(
+            DestinationManagerRepositoryPort destinationManagerRepository) {
+        return new ApproveDestinationManagerRegistrationUseCase(destinationManagerRepository);
     }
 
     @Bean

@@ -8,8 +8,8 @@ public record BlockUserRequest(
         @NotNull UserStatus status
 ) {
     public BlockUserRequest {
-        if (status != UserStatus.BLOCKED && status != UserStatus.SUSPENDED) {
-            throw new InvalidUserDataException("Target status must be BLOCKED or SUSPENDED.");
+        if (status != UserStatus.ACTIVE && status != UserStatus.BLOCKED && status != UserStatus.SUSPENDED) {
+            throw new InvalidUserDataException("Target status must be ACTIVE, BLOCKED or SUSPENDED.");
         }
     }
 }

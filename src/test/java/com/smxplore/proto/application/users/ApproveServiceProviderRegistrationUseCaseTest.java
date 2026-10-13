@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.exceptions.UserNotFoundException;
 import com.smxplore.proto.domain.model.serviceprovider.RegistrationStatus;
 import com.smxplore.proto.domain.model.serviceprovider.ServiceProvider;
@@ -77,6 +78,18 @@ class ApproveServiceProviderRegistrationUseCaseTest {
 
         StepVerifier.create(useCase.handle(provider.getId()))
                 .expectError(ServiceProviderRegistrationNotPendingException.class)
+                .verify();
+
+        verify(serviceProviderRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldFailWhenTheAccountIsBlockedOrSuspended() {
+        var provider = provider(RegistrationStatus.PENDING, UserStatus.BLOCKED);
+        when(serviceProviderRepository.findById(provider.getId())).thenReturn(Mono.just(provider));
+
+        StepVerifier.create(useCase.handle(provider.getId()))
+                .expectError(UserAccountNotActiveException.class)
                 .verify();
 
         verify(serviceProviderRepository, never()).save(any());

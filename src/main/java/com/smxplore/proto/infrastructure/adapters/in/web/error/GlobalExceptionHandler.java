@@ -1,10 +1,13 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.error;
 
+import com.smxplore.proto.domain.exceptions.DestinationManagerRegistrationNotPendingException;
+import com.smxplore.proto.domain.exceptions.GuideRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.InvalidCredentialsException;
 import com.smxplore.proto.domain.exceptions.InvalidSiteException;
 import com.smxplore.proto.domain.exceptions.InvalidUserDataException;
 import com.smxplore.proto.domain.exceptions.InvalidUserRoleException;
 import com.smxplore.proto.domain.exceptions.InvalidZoneException;
+import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotApprovedException;
 import com.smxplore.proto.domain.exceptions.ServiceProviderRegistrationNotPendingException;
 import com.smxplore.proto.domain.exceptions.UserAccountNotActiveException;
 import com.smxplore.proto.domain.exceptions.UserEmailAlreadyRegisteredException;
@@ -103,6 +106,8 @@ public class GlobalExceptionHandler {
             UserEmailAlreadyRegisteredException.class,
             UserPhoneAlreadyRegisteredException.class,
             ServiceProviderRegistrationNotPendingException.class,
+            GuideRegistrationNotPendingException.class,
+            DestinationManagerRegistrationNotPendingException.class,
             DataIntegrityViolationException.class
     })
     public ResponseEntity<ApiErrorResponse> handleConflict(RuntimeException exception, ServerWebExchange exchange) {
@@ -114,7 +119,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, exception.getMessage(), exchange);
     }
 
-    @ExceptionHandler(UserAccountNotActiveException.class)
+    @ExceptionHandler({UserAccountNotActiveException.class, ServiceProviderRegistrationNotApprovedException.class})
     public ResponseEntity<ApiErrorResponse> handleForbidden(RuntimeException exception, ServerWebExchange exchange) {
         return build(HttpStatus.FORBIDDEN, exception.getMessage(), exchange);
     }
