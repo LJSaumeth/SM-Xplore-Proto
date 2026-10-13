@@ -28,6 +28,20 @@ import com.smxplore.proto.domain.exceptions.event.InvalidEventScheduleException;
 import com.smxplore.proto.domain.exceptions.event.InvalidEventStatusTransitionException;
 import com.smxplore.proto.domain.exceptions.event.InvalidExpectedAttendanceException;
 import com.smxplore.proto.domain.exceptions.location.InvalidLocationParamsException;
+import com.smxplore.proto.domain.exceptions.reservation.DifferentProvidersInReservationException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidBookingDateException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidNumberOfPeopleException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationItemException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationItemPriceException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationRequestException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationStatusTransitionException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationTotalException;
+import com.smxplore.proto.domain.exceptions.reservation.InvalidReservationTouristException;
+import com.smxplore.proto.domain.exceptions.reservation.MixedReservationItemTypesException;
+import com.smxplore.proto.domain.exceptions.reservation.ReservationItemNotFoundException;
+import com.smxplore.proto.domain.exceptions.reservation.ReservationItemsNotAllowedException;
+import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundException;
+import com.smxplore.proto.domain.exceptions.reservation.TooManyReservationItemsException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidCommentException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidReportRequestException;
 import com.smxplore.proto.domain.exceptions.securityreport.InvalidStatusTransitionException;
@@ -60,6 +74,12 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler({
+            ReportNotFoundException.class,
+            ServiceNotFoundException.class,
+            ReservationNotFoundException.class,
+            ReservationItemNotFoundException.class
+    })
     @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class, UserNotFoundException.class})
     @ExceptionHandler({ReportNotFoundException.class, ServiceNotFoundException.class,
             EventNotFoundException.class, ActivityNotFoundException.class})
@@ -70,6 +90,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             InvalidStatusTransitionException.class,
             AttributeAlreadyAddedException.class,
+            InvalidReservationStatusTransitionException.class,
+            MixedReservationItemTypesException.class,
+            TooManyReservationItemsException.class,
+            DifferentProvidersInReservationException.class,
+            ReservationItemsNotAllowedException.class
+    })
             UserEmailAlreadyRegisteredException.class,
             UserPhoneAlreadyRegisteredException.class,
             ServiceProviderRegistrationNotPendingException.class
@@ -108,6 +134,13 @@ public class GlobalExceptionHandler {
             InvalidServicePriceException.class,
             InvalidServiceProviderException.class,
             InvalidServiceProviderNameException.class,
+            InvalidReservationRequestException.class,
+            InvalidReservationItemException.class,
+            InvalidBookingDateException.class,
+            InvalidNumberOfPeopleException.class,
+            InvalidReservationTotalException.class,
+            InvalidReservationTouristException.class,
+            InvalidReservationItemPriceException.class
             InvalidUserDataException.class,
             InvalidUserRoleException.class
             InvalidEventRequestException.class,
