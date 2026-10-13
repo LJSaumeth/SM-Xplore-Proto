@@ -23,3 +23,13 @@ spring:
       auto-index-creation: false
       representation:
         big-decimal: decimal128
+
+app:
+  security:
+    jwt:
+      # Secreto HMAC para firmar los JWT (mínimo 32 bytes) — usa uno fuerte por entorno
+      secret: ${JWT_SECRET:dev-secret-change-me-32-bytes-minimum!}
+      expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+    cors:
+      # Orígenes permitidos para el front (patterns separados por coma)
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}

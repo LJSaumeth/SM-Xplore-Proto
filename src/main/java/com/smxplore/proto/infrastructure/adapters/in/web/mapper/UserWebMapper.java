@@ -6,9 +6,11 @@ import com.smxplore.proto.domain.model.guide.Guide;
 import com.smxplore.proto.domain.model.serviceprovider.RegistrationStatus;
 import com.smxplore.proto.domain.model.serviceprovider.ServiceProvider;
 import com.smxplore.proto.domain.model.tourist.Tourist;
+import com.smxplore.proto.domain.model.user.LoginResult;
 import com.smxplore.proto.domain.model.user.User;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.GuideProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.RegisterUserRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
@@ -22,6 +24,10 @@ import java.util.UUID;
 public interface UserWebMapper {
 
     UserResponse toResponse(User user);
+
+    default AuthResponse toAuthResponse(LoginResult result) {
+        return new AuthResponse(result.token(), "Bearer", result.expiresInSeconds(), toResponse(result.user()));
+    }
 
     GuideProfileResponse toGuideResponse(Guide guide);
 
