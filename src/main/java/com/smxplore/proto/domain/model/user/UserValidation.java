@@ -3,6 +3,7 @@ package com.smxplore.proto.domain.model.user;
 import com.smxplore.proto.domain.exceptions.InvalidUserDataException;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -53,7 +54,7 @@ public final class UserValidation {
     }
 
     public static String validateEmail(String value) {
-        String normalized = requireText(value, "email").toLowerCase();
+        String normalized = requireText(value, "email").toLowerCase(Locale.ROOT);
         if (!EMAIL_PATTERN.matcher(normalized).matches()) {
             throw new InvalidUserDataException("The email '" + value + "' has an invalid format.");
         }

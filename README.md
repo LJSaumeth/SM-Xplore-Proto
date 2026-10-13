@@ -58,6 +58,12 @@ Swagger UI / docs paths.
   endpoints (`PUT`/`DELETE /api/v1/users/{id}` are self-or-admin). Cross-user
   ownership checks for reservations, services and security reports are pending —
   tracked as follow-ups with each module owner.
+- `GET /api/v1/users/{id}` stays readable by any authenticated account (it
+  exposes profile fields such as email/phone) — pending a product decision:
+  restrict it to self-or-admin or return a slimmer public projection.
+- Role reassignment (`PATCH /api/v1/users/{id}/role`) updates only the accounts
+  table; a cross-subtype change can leave the account unable to log in
+  (users-module follow-up).
 - No refresh tokens and no revocation: a token stays valid until `exp`
   (60 minutes by default, `JWT_EXPIRATION_MINUTES`); blocking a user does not
   invalidate tokens already issued.

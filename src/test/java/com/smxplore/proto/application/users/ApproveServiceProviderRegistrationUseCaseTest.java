@@ -54,6 +54,8 @@ class ApproveServiceProviderRegistrationUseCaseTest {
                     assertThat(approved.getStatus()).isEqualTo(UserStatus.ACTIVE);
                 })
                 .verifyComplete();
+
+        verify(serviceProviderRepository).save(provider);
     }
 
     @Test

@@ -37,3 +37,5 @@ app:
       # Opcional: si se definen, crea el primer ADMIN al arrancar (idempotente por email)
       email: ${ADMIN_EMAIL:}
       password: ${ADMIN_PASSWORD:}
+      dni-number: ${ADMIN_DNI_NUMBER:000000000}
+      dni-type: ${ADMIN_DNI_TYPE:CITIZENSHIP_CARD}

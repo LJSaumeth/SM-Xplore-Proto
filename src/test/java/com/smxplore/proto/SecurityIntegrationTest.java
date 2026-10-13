@@ -99,10 +99,14 @@ class SecurityIntegrationTest {
     }
 
     private Session tourist() {
+        return touristWithEmail(uniqueEmail("tourist"));
+    }
+
+    private Session touristWithEmail(String email) {
         return registerAndLogin("TOURIST",
                 ",\n                  \"dniNumber\": \"" + uniqueDni()
                         + "\",\n                  \"dniType\": \"CITIZENSHIP_CARD\"",
-                uniqueEmail("tourist"));
+                email);
     }
 
     private String destinationManagerToken() {
@@ -239,7 +243,8 @@ class SecurityIntegrationTest {
     @Test
     void profileEndpointsAreSelfOrAdminOnly() {
         var alice = tourist();
-        var bob = tourist();
+        var bobEmail = uniqueEmail("bob");
+        var bob = touristWithEmail(bobEmail);
         var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
 
         // alice updates her own profile
@@ -251,6 +256,16 @@ class SecurityIntegrationTest {
                         """.formatted(uniqueEmail("alice-updated"), uniquePhone()))
                 .exchange()
                 .expectStatus().isOk();
+
+        // updating to an email already registered by someone else conflicts
+        webTestClient.put().uri("/api/v1/users/{userId}", alice.id())
+                .headers(h -> h.setBearerAuth(alice.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"fullName": "Alice Updated", "email": "%s", "phone": "%s"}
+                        """.formatted(bobEmail, uniquePhone()))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
 
         // alice cannot touch bob's profile
         webTestClient.put().uri("/api/v1/users/{userId}", bob.id())
@@ -298,6 +313,11 @@ class SecurityIntegrationTest {
                 .getResponseBody();
         var providerId = Objects.requireNonNull(created).id();
 
+        // Anonymous callers cannot approve
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
+                .exchange()
+                .expectStatus().isUnauthorized();
+
         // While the registration is pending the account cannot log in
         webTestClient.post().uri("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -315,6 +335,35 @@ class SecurityIntegrationTest {
                 .expectStatus().isForbidden();
 
         var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        // Non-provider ids are not approvable (regression: no ClassCastException)
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", tourist.id())
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // Admins can list the pending registrations (documented flow)
+        webTestClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/users/search")
+                        .queryParam("role", "SERVICE_PROVIDER")
+                        .queryParam("status", "INACTIVE")
+                        .build())
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        var pending = webTestClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/users/search")
+                        .queryParam("role", "SERVICE_PROVIDER")
+                        .queryParam("status", "INACTIVE")
+                        .build())
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(UserResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(pending).isNotNull();
+        assertThat(pending).anyMatch(user -> providerEmail.equals(user.email()));
+
         var approved = webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
                 .headers(h -> h.setBearerAuth(admin))
                 .exchange()

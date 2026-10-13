@@ -13,12 +13,14 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
  * Creates the first administrator account at startup when {@code ADMIN_EMAIL}
  * and {@code ADMIN_PASSWORD} are provided and no account exists yet for that
- * email. Idempotent: it is a no-op when the account already exists.
+ * email. Idempotent: it is a no-op when the account already exists. Failures
+ * are logged (never fatal) so a misconfigured bootstrap cannot brick startup.
  */
 @Slf4j
 @Component
@@ -47,34 +49,47 @@ public class AdminBootstrapRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+        var email = adminEmail == null ? "" : adminEmail.strip();
+        if (email.isBlank() || adminPassword == null || adminPassword.isBlank()) {
             log.info("Admin bootstrap skipped: ADMIN_EMAIL/ADMIN_PASSWORD not provided.");
             return;
         }
-        var existing = userRepository.findByEmail(adminEmail).block();
-        if (existing != null) {
-            log.info("Admin bootstrap: account '{}' already exists, skipping.", adminEmail);
-            return;
+        try {
+            var existing = userRepository.findByEmail(email).block();
+            if (existing != null) {
+                if (existing.getRole() == UserRole.ADMIN) {
+                    log.info("Admin bootstrap: account '{}' already exists, skipping.", email);
+                } else {
+                    log.warn("Admin bootstrap: account '{}' already exists with role {}; "
+                            + "no administrator was created.", email, existing.getRole());
+                }
+                return;
+            }
+            var admin = Admin.builder()
+                    .id(UUID.randomUUID())
+                    .fullName("Bootstrap Admin")
+                    .email(email)
+                    .phone(bootstrapPhone(email))
+                    .dniNumber(adminDniNumber)
+                    .dniType(adminDniType)
+                    .role(UserRole.ADMIN)
+                    .status(UserStatus.ACTIVE)
+                    .signedUpAt(Instant.now())
+                    .passwordHash(passwordHasher.hash(adminPassword).block())
+                    .build();
+            admin.validate();
+            userRepository.save(admin).block();
+            log.info("Admin bootstrap: created administrator account '{}'.", email);
+        } catch (RuntimeException exception) {
+            log.error("Admin bootstrap failed for '{}': {}. The application will start without a "
+                            + "bootstrapped administrator; check ADMIN_DNI_NUMBER/ADMIN_DNI_TYPE and "
+                            + "email/phone collisions, or create the account manually.",
+                    email, exception.getMessage());
         }
-        var admin = Admin.builder()
-                .id(UUID.randomUUID())
-                .fullName("Bootstrap Admin")
-                .email(adminEmail)
-                .phone(bootstrapPhone(adminEmail))
-                .dniNumber(adminDniNumber)
-                .dniType(adminDniType)
-                .role(UserRole.ADMIN)
-                .status(UserStatus.ACTIVE)
-                .signedUpAt(Instant.now())
-                .passwordHash(passwordHasher.hash(adminPassword).block())
-                .build();
-        admin.validate();
-        userRepository.save(admin).block();
-        log.info("Admin bootstrap: created administrator account '{}'.", adminEmail);
     }
 
     private static String bootstrapPhone(String email) {
-        var digits = String.format("%09d", Math.abs(email.hashCode()) % 1_000_000_000);
+        var digits = String.format(Locale.ROOT, "%09d", Math.abs((long) email.hashCode()) % 1_000_000_000);
         return "+57" + digits;
     }
 }
