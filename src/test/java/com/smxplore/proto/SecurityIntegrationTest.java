@@ -161,20 +161,128 @@ class SecurityIntegrationTest {
 
     @Test
     void protectedEndpointsRequireAValidToken() {
-        webTestClient.get().uri("/api/v1/events")
-                .exchange()
-                .expectStatus().isUnauthorized();
-
         webTestClient.post().uri("/api/v1/events")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(eventBody())
                 .exchange()
                 .expectStatus().isUnauthorized();
 
-        webTestClient.get().uri("/api/v1/events")
+        webTestClient.get().uri("/api/v1/reservations/tourists/{touristId}", UUID.randomUUID())
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        webTestClient.get().uri("/api/v1/reservations/tourists/{touristId}", UUID.randomUUID())
                 .headers(h -> h.setBearerAuth("not-a-real-token"))
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void publicCatalogIsOpenWithoutToken() {
+        webTestClient.get().uri("/api/v1/events")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/activities")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/services?status=AVAILABLE")
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void publicProfilesHideContactDataForAnonymousCallers() {
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        var providerEmail = uniqueEmail("public-provider");
+        var providerId = registerServiceProvider(providerEmail);
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        var anonymousProfile = webTestClient.get().uri("/api/v1/users/providers/{providerId}", providerId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(anonymousProfile).isNotNull();
+        assertThat(anonymousProfile.email()).isNull();
+        assertThat(anonymousProfile.phone()).isNull();
+
+        var tourist = tourist();
+        var authenticatedProfile = webTestClient.get().uri("/api/v1/users/providers/{providerId}", providerId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(authenticatedProfile).isNotNull();
+        assertThat(authenticatedProfile.email()).isEqualTo(providerEmail);
+
+        var guideEmail = uniqueEmail("public-guide");
+        var guide = webTestClient.post().uri("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"fullName": "Public Guide", "email": "%s", "phone": "%s", "password": "%s",
+                         "role": "GUIDE", "dniNumber": "%s", "dniType": "CITIZENSHIP_CARD", "license": "LIC-%s"}
+                        """.formatted(guideEmail, uniquePhone(), PASSWORD, uniqueDni(), uniqueDni()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UserResponse.class)
+                .returnResult()
+                .getResponseBody();
+        var guideId = Objects.requireNonNull(guide).id();
+        webTestClient.post().uri("/api/v1/users/{userId}/approve-guide", guideId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
+
+        var anonymousGuide = webTestClient.get().uri("/api/v1/users/guides/{guideId}", guideId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(GuideProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(anonymousGuide).isNotNull();
+        assertThat(anonymousGuide.email()).isNull();
+        assertThat(anonymousGuide.phone()).isNull();
+    }
+
+    @Test
+    void providerRejectionFlow() {
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+        var providerEmail = uniqueEmail("rejected-provider");
+        var providerId = registerServiceProvider(providerEmail);
+
+        var rejected = webTestClient.post().uri("/api/v1/users/{userId}/reject-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ServiceProviderProfileResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(rejected).isNotNull();
+        assertThat(rejected.registrationStatus()).isEqualTo(RegistrationStatus.REJECTED);
+
+        // rejected providers still cannot log in
+        webTestClient.post().uri("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"email": "%s", "password": "%s"}
+                        """.formatted(providerEmail, PASSWORD))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // rejecting twice conflicts
+        webTestClient.post().uri("/api/v1/users/{userId}/reject-provider", providerId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
@@ -396,7 +504,8 @@ class SecurityIntegrationTest {
                 .returnResult()
                 .getResponseBody();
         assertThat(pending).isNotNull();
-        assertThat(pending).anyMatch(user -> providerEmail.equals(user.email()));
+        assertThat(pending).anyMatch(user -> providerEmail.equals(user.email())
+                && user.registrationStatus() == RegistrationStatus.PENDING);
 
         var approved = webTestClient.post().uri("/api/v1/users/{userId}/approve-provider", providerId)
                 .headers(h -> h.setBearerAuth(admin))

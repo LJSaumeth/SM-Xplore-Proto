@@ -12,6 +12,7 @@ import com.smxplore.proto.application.users.ListUsersUseCase;
 import com.smxplore.proto.application.users.LoginUseCase;
 import com.smxplore.proto.application.users.RecoverPasswordUseCase;
 import com.smxplore.proto.application.users.RegisterUserUseCase;
+import com.smxplore.proto.application.users.RejectServiceProviderRegistrationUseCase;
 import com.smxplore.proto.application.users.ResetUserPasswordUseCase;
 import com.smxplore.proto.application.users.SearchUserUseCase;
 import com.smxplore.proto.application.users.UpdateUserProfileUseCase;
@@ -35,6 +36,7 @@ import com.smxplore.proto.domain.ports.usecases.ListUsersUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.LoginUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.RecoverPasswordUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.RegisterUserUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.RejectServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.ResetUserPasswordUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.SearchUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.UpdateUserProfileUseCasePort;
@@ -94,6 +96,12 @@ public class UserUseCaseConfiguration {
     public ApproveDestinationManagerRegistrationUseCasePort approveDestinationManagerRegistrationUseCase(
             DestinationManagerRepositoryPort destinationManagerRepository) {
         return new ApproveDestinationManagerRegistrationUseCase(destinationManagerRepository);
+    }
+
+    @Bean
+    public RejectServiceProviderRegistrationUseCasePort rejectServiceProviderRegistrationUseCase(
+            ServiceProviderRepositoryPort serviceProviderRepository) {
+        return new RejectServiceProviderRegistrationUseCase(serviceProviderRepository);
     }
 
     @Bean

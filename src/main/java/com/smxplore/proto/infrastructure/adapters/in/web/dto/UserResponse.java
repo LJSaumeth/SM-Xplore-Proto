@@ -1,5 +1,6 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.dto;
 
+import com.smxplore.proto.domain.model.serviceprovider.RegistrationStatus;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 
@@ -13,6 +14,7 @@ public record UserResponse(
         String phone,
         UserRole role,
         UserStatus status,
+        RegistrationStatus registrationStatus,
         Instant signedUpAt
 ) {
 }

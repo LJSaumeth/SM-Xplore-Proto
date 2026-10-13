@@ -12,6 +12,7 @@ import com.smxplore.proto.domain.ports.usecases.BlockOrSuspendUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.DeleteOwnAccountUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.GetUserProfileUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.ListUsersUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.RejectServiceProviderRegistrationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.ResetUserPasswordUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.SearchUserUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.UpdateUserProfileUseCasePort;
@@ -70,6 +71,7 @@ public class UserController {
     private final ApproveServiceProviderRegistrationUseCasePort approveServiceProviderRegistrationUseCase;
     private final ApproveGuideRegistrationUseCasePort approveGuideRegistrationUseCase;
     private final ApproveDestinationManagerRegistrationUseCasePort approveDestinationManagerRegistrationUseCase;
+    private final RejectServiceProviderRegistrationUseCasePort rejectServiceProviderRegistrationUseCase;
     private final UserWebMapper mapper;
 
     @GetMapping("/{userId}")
@@ -143,15 +145,20 @@ public class UserController {
     }
 
     @GetMapping("/guides/{guideId}")
-    @Operation(summary = "Get a guide profile")
-    public Mono<GuideProfileResponse> findGuide(@PathVariable UUID guideId) {
-        return viewGuideProfileUseCase.handle(guideId).map(mapper::toGuideResponse);
+    @Operation(summary = "Get a guide profile (public; contact data only for authenticated callers)")
+    public Mono<GuideProfileResponse> findGuide(@PathVariable UUID guideId, @AuthenticationPrincipal Jwt jwt) {
+        return viewGuideProfileUseCase.handle(guideId)
+                .map(guide -> jwt == null ? mapper.toPublicGuideResponse(guide) : mapper.toGuideResponse(guide));
     }
 
     @GetMapping("/providers/{providerId}")
-    @Operation(summary = "Get a service provider profile")
-    public Mono<ServiceProviderProfileResponse> findServiceProvider(@PathVariable UUID providerId) {
-        return viewServiceProviderProfileUseCase.handle(providerId).map(mapper::toServiceProviderResponse);
+    @Operation(summary = "Get a service provider profile (public; contact data only for authenticated callers)")
+    public Mono<ServiceProviderProfileResponse> findServiceProvider(@PathVariable UUID providerId,
+                                                                    @AuthenticationPrincipal Jwt jwt) {
+        return viewServiceProviderProfileUseCase.handle(providerId)
+                .map(provider -> jwt == null
+                        ? mapper.toPublicServiceProviderResponse(provider)
+                        : mapper.toServiceProviderResponse(provider));
     }
 
     @PostMapping("/{userId}/approve-provider")
@@ -171,6 +178,13 @@ public class UserController {
     @Operation(summary = "Approve a destination manager registration (admin)")
     public Mono<UserResponse> approveManager(@PathVariable UUID userId) {
         return approveDestinationManagerRegistrationUseCase.handle(userId).map(mapper::toResponse);
+    }
+
+    @PostMapping("/{userId}/reject-provider")
+    @Operation(summary = "Reject a service provider registration (admin)")
+    public Mono<ServiceProviderProfileResponse> rejectServiceProvider(@PathVariable UUID userId) {
+        return rejectServiceProviderRegistrationUseCase.handle(userId)
+                .map(mapper::toServiceProviderResponse);
     }
 
     private static void requireSelfOrAdmin(Jwt jwt, UUID userId) {

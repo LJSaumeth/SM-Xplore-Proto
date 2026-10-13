@@ -27,14 +27,19 @@ Build and tests:
 
 ## Security
 
-All endpoints require a **JWT Bearer token** except `/api/v1/auth/register`,
-`/api/v1/auth/login`, `/api/v1/auth/recover-password`, `/actuator/health` and the
-Swagger UI / docs paths.
+All endpoints require a **JWT Bearer token** except the public surface:
+`/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/recover-password`,
+`/actuator/health`, the Swagger UI / docs paths, the **public catalog**
+(`GET` of `/api/v1/events`, `/api/v1/activities`, `/api/v1/services`,
+`/api/v1/zones` and `/api/v1/sites`) and the **public profiles**
+(`GET /api/v1/users/guides/{id}` and `/api/v1/users/providers/{id}` — contact
+data is only included for authenticated callers).
 
 1. **Register** (`POST /api/v1/auth/register`): public self-registration accepts
    `TOURIST`, `SERVICE_PROVIDER`, `GUIDE` and `DESTINATION_MANAGER`; the latter
    three stay `INACTIVE` until an administrator approves them
-   (`POST /api/v1/users/{id}/approve-provider`, `/approve-guide`, `/approve-manager`).
+   (`POST /api/v1/users/{id}/approve-provider`, `/approve-guide`, `/approve-manager`;
+   a pending provider can also be rejected with `/reject-provider`).
    Pending registrations are listed with
    `GET /api/v1/users/search?role=<ROLE>&status=INACTIVE`. Changing a user's role
    is not supported (each role has its own profile data): accounts must be created
@@ -60,8 +65,8 @@ Swagger UI / docs paths.
   ownership checks for reservations, services and security reports are pending —
   tracked as follow-ups with each module owner.
 - Public profiles (`GET /api/v1/users/guides/{id}`, `/users/providers/{id}`) only
-  expose active (approved) accounts, but their contact data (email/phone) remains
-  visible to any authenticated user — pending a product decision.
+  expose active (approved) accounts; email/phone are returned to authenticated
+  callers only (anonymous requests get them as `null`).
 - Role changes are rejected (400): each role has its own profile data, so an
   account must be created with the role it needs (see the `approve-*` flows).
 - Registration **reject** flows are not exposed yet (the domain supports rejecting

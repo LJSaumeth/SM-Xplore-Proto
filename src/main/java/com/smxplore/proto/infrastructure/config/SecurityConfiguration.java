@@ -59,6 +59,14 @@ public class SecurityConfiguration {
                         .pathMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .pathMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/webjars/**")
                         .permitAll()
+                        // Public catalog (no session): listings, details and public profiles.
+                        // Profile contact data (email/phone) is only returned to authenticated callers (controller-level).
+                        .pathMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/activities", "/api/v1/activities/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/services", "/api/v1/services/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/zones", "/api/v1/zones/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/sites", "/api/v1/sites/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/users/guides/*", "/api/v1/users/providers/*").permitAll()
                         // Events: managed by destination managers
                         .pathMatchers(HttpMethod.POST, "/api/v1/events")
                         .hasAnyRole(UserRole.DESTINATION_MANAGER.name(), UserRole.ADMIN.name())
@@ -106,7 +114,7 @@ public class SecurityConfiguration {
                         .hasRole(UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.POST, "/api/v1/users/*/reset-password",
                                 "/api/v1/users/*/approve-provider", "/api/v1/users/*/approve-guide",
-                                "/api/v1/users/*/approve-manager")
+                                "/api/v1/users/*/approve-manager", "/api/v1/users/*/reject-provider")
                         .hasRole(UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.DELETE, "/api/v1/users/*/admin")
                         .hasRole(UserRole.ADMIN.name())
