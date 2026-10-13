@@ -14,28 +14,31 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BlockOrSuspendUserUseCase implements BlockOrSuspendUserUseCasePort {
 
+    private static final String INVALID_TARGET_MESSAGE = "Target status must be ACTIVE, BLOCKED or SUSPENDED.";
+
     private final UserRepositoryPort userRepository;
 
     @Override
     public Mono<User> handle(UUID userId, UserStatus targetStatus) {
         return Mono.justOrEmpty(targetStatus)
-                .filter(BlockOrSuspendUserUseCase::isBlockable)
-                .switchIfEmpty(Mono.error(new InvalidUserDataException("Target status must be BLOCKED or SUSPENDED.")))
+                .filter(BlockOrSuspendUserUseCase::isChangeable)
+                .switchIfEmpty(Mono.error(new InvalidUserDataException(INVALID_TARGET_MESSAGE)))
                 .flatMap(status -> userRepository.findById(userId)
                         .switchIfEmpty(Mono.error(new UserNotFoundException(userId)))
                         .doOnNext(user -> applyStatus(user, status))
                         .flatMap(userRepository::save));
     }
 
-    private static boolean isBlockable(UserStatus status) {
-        return status == UserStatus.BLOCKED || status == UserStatus.SUSPENDED;
+    private static boolean isChangeable(UserStatus status) {
+        return status == UserStatus.ACTIVE || status == UserStatus.BLOCKED || status == UserStatus.SUSPENDED;
     }
 
     private static void applyStatus(User user, UserStatus status) {
         switch (status) {
+            case ACTIVE -> user.activate();
             case BLOCKED -> user.block();
             case SUSPENDED -> user.suspend();
-            default -> throw new InvalidUserDataException("Target status must be BLOCKED or SUSPENDED.");
+            default -> throw new InvalidUserDataException(INVALID_TARGET_MESSAGE);
         }
     }
 }
