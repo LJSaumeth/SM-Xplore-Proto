@@ -40,6 +40,8 @@ ALTER TABLE reservations ADD COLUMN IF NOT EXISTS provider_id UUID;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guide_id UUID;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS code VARCHAR(20);
 CREATE SEQUENCE IF NOT EXISTS reservation_code_seq;
+-- Backfill for reservations created before the readable code column existed.
+UPDATE reservations SET code = 'R-' || nextval('reservation_code_seq') WHERE code IS NULL;
 
 CREATE TABLE IF NOT EXISTS reservation_items (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),

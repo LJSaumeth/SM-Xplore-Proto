@@ -1,6 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
 import com.smxplore.proto.domain.exceptions.activity.ActivityNotFoundException;
+import com.smxplore.proto.domain.model.activity.ActivityStatus;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.activity.CancelActivityUseCasePort;
@@ -78,33 +79,36 @@ public class ActivityController {
     }
 
     @GetMapping("/{activityId}")
-    @Operation(summary = "Get one activity by id")
-    public Mono<ActivityResponse> findOne(@PathVariable UUID activityId) {
-        return viewActivityDetailsUseCase.handle(activityId).map(mapper::toResponse);
+    @Operation(summary = "Get one activity by id (unpublished activities are hidden from anonymous callers)")
+    public Mono<ActivityResponse> findOne(@PathVariable UUID activityId, @AuthenticationPrincipal Jwt jwt) {
+        return viewActivityDetailsUseCase.handle(activityId)
+                .map(mapper::toResponse)
+                .filter(response -> jwt != null || isPublished(response))
+                .switchIfEmpty(Mono.error(new ActivityNotFoundException(activityId)));
     }
 
     @GetMapping
-    @Operation(summary = "List all activities")
-    public Flux<ActivityResponse> findAll() {
-        return consultActivitiesUseCase.handle().map(mapper::toResponse);
+    @Operation(summary = "List all activities (anonymous callers only see published ones)")
+    public Flux<ActivityResponse> findAll(@AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, consultActivitiesUseCase.handle().map(mapper::toResponse));
     }
 
     @GetMapping("/search")
-    @Operation(summary = "List activities by category")
-    public Flux<ActivityResponse> findByCategory(@RequestParam String category) {
-        return findActivitiesByCategoryUseCase.handle(category).map(mapper::toResponse);
+    @Operation(summary = "List activities by category (anonymous callers only see published ones)")
+    public Flux<ActivityResponse> findByCategory(@RequestParam String category, @AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, findActivitiesByCategoryUseCase.handle(category).map(mapper::toResponse));
     }
 
     @GetMapping("/site/{siteId}")
-    @Operation(summary = "List the activities of a site")
-    public Flux<ActivityResponse> findBySite(@PathVariable UUID siteId) {
-        return findActivitiesBySiteUseCase.handle(siteId).map(mapper::toResponse);
+    @Operation(summary = "List the activities of a site (anonymous callers only see published ones)")
+    public Flux<ActivityResponse> findBySite(@PathVariable UUID siteId, @AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, findActivitiesBySiteUseCase.handle(siteId).map(mapper::toResponse));
     }
 
     @GetMapping("/zone/{zoneId}")
-    @Operation(summary = "List the activities of the sites of a zone")
-    public Flux<ActivityResponse> findByZone(@PathVariable UUID zoneId) {
-        return findActivitiesByZoneUseCase.handle(zoneId).map(mapper::toResponse);
+    @Operation(summary = "List the activities of the sites of a zone (anonymous callers only see published ones)")
+    public Flux<ActivityResponse> findByZone(@PathVariable UUID zoneId, @AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, findActivitiesByZoneUseCase.handle(zoneId).map(mapper::toResponse));
     }
 
     @PatchMapping("/{activityId}")
@@ -159,6 +163,14 @@ public class ActivityController {
 
     private static boolean isGuide(Jwt jwt) {
         return UserRole.GUIDE.name().equals(jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM));
+    }
+
+    private static Flux<ActivityResponse> visibleTo(Jwt jwt, Flux<ActivityResponse> activities) {
+        return jwt == null ? activities.filter(ActivityController::isPublished) : activities;
+    }
+
+    private static boolean isPublished(ActivityResponse response) {
+        return response.status() == ActivityStatus.PUBLISHED;
     }
 
     private static boolean isAdminOrManager(Jwt jwt) {

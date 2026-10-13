@@ -30,18 +30,18 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
- * Reglas de negocio de los items de una reserva:
+ * Business rules for the items of a reservation:
  * <ul>
- *     <li>La reserva debe existir y no estar en un estado final.</li>
- *     <li>Todos los items de una reserva deben ser del mismo tipo y hay un
- *     máximo de {@value #MAX_ITEMS_PER_RESERVATION} items por reserva.</li>
- *     <li>Los items de tipo SERVICE deben pertenecer a servicios ofrecidos por un mismo provider
- *     y su precio se toma del catálogo (el enviado por el cliente se ignora).</li>
- *     <li>Los items de tipo ACTIVITY deben pertenecer a actividades del mismo guía y su precio
- *     también se toma del catálogo.</li>
- *     <li>Los items de tipo EVENT están limitados a uno por reserva.</li>
- *     <li>La reserva recuerda su provider (items SERVICE) o su guía (items ACTIVITY) para que
- *     cada prestadora o guía pueda consultar las reservas que recibió.</li>
+ *     <li>The reservation must exist and not be in a final state.</li>
+ *     <li>All the items of a reservation must share the same type; there is a
+ *     maximum of {@value #MAX_ITEMS_PER_RESERVATION} items per reservation.</li>
+ *     <li>SERVICE items must belong to services offered by the same provider and
+ *     their price comes from the catalog (the client-sent price is ignored).</li>
+ *     <li>ACTIVITY items must belong to activities of the same guide; their price
+ *     also comes from the catalog.</li>
+ *     <li>EVENT items are limited to one per reservation.</li>
+ *     <li>The reservation remembers its provider (SERVICE items) or guide (ACTIVITY
+ *     items) so each provider/guide can list the reservations they received.</li>
  * </ul>
  */
 @RequiredArgsConstructor
@@ -67,7 +67,8 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
                                             .flatMapMany(resolved -> Flux.defer(() -> reservationItemRepo.saveAll(resolved))
                                                     .collectList()
                                                     .flatMap(saved -> assignOwner(reservation, resolved)
-                                                            .then(recalculateTotal(reservation, existing, saved))
+                                                            .then(Mono.defer(() -> recalculateTotal(reservation,
+                                                                    existing, saved)))
                                                             .thenReturn(saved))
                                                     .flatMapMany(Flux::fromIterable)));
                         }));
@@ -100,9 +101,9 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
     }
 
     /**
-     * Valida las reglas y resuelve el precio de los items entrantes: para los
-     * items SERVICE y ACTIVITY el precio es el del catálogo; EVENT usa el
-     * precio recibido mientras no exista su catálogo.
+     * Validates the rules and resolves the price of the incoming items: for
+     * SERVICE and ACTIVITY items the price is the catalog's; EVENT uses the
+     * received price while its catalog does not exist.
      */
     private Mono<List<ReservationItem>> resolveItems(List<ReservationItem> existing, List<ReservationItem> incoming) {
         var incomingType = incoming.getFirst().getType();
@@ -215,7 +216,7 @@ public class AddReservationItemsUseCase implements AddReservationItemsUseCasePor
     }
 
     /**
-     * El total de la reserva es la suma de los precios de todos sus items.
+     * The total of the reservation is the sum of the prices of all its items.
      */
     private Mono<Void> recalculateTotal(Reservation reservation, List<ReservationItem> existing,
                                         List<ReservationItem> saved) {

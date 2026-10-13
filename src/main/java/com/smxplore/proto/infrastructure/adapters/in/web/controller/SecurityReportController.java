@@ -2,6 +2,7 @@ package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
 import com.smxplore.proto.domain.model.securityreport.SecurityReportStatus;
 import com.smxplore.proto.domain.model.types.UserRef;
+import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.ports.usecases.securityreport.AddReportPhotosUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.ChangeReportTextUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.securityreport.CloseReportUseCasePort;
@@ -19,6 +20,7 @@ import com.smxplore.proto.infrastructure.adapters.in.web.dto.PhotosRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.SecurityReportRequest;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.SecurityReportResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.mapper.SecurityReportWebMapper;
+import com.smxplore.proto.infrastructure.config.JwtConfiguration;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -88,17 +91,23 @@ public class SecurityReportController {
     }
 
     @PatchMapping("/{reportId}/text")
-    @Operation(summary = "Change the text of a security report")
+    @Operation(summary = "Change the text of a security report (its author or staff)")
     public Mono<SecurityReportResponse> changeText(@PathVariable UUID reportId,
-                                                   @Valid @RequestBody ChangeReportTextRequest request) {
-        return changeReportTextUseCase.handle(reportId, request.text()).map(mapper::toResponse);
+                                                   @Valid @RequestBody ChangeReportTextRequest request,
+                                                   @AuthenticationPrincipal Jwt jwt) {
+        return requireReportAuthorOrStaff(jwt, reportId)
+                .then(Mono.defer(() -> changeReportTextUseCase.handle(reportId, request.text())))
+                .map(mapper::toResponse);
     }
 
     @PostMapping("/{reportId}/photos")
-    @Operation(summary = "Add photos to a security report")
+    @Operation(summary = "Add photos to a security report (its author or staff)")
     public Mono<SecurityReportResponse> addPhotos(@PathVariable UUID reportId,
-                                                  @Valid @RequestBody PhotosRequest request) {
-        return addReportPhotosUseCase.handle(reportId, request.photosUrls()).map(mapper::toResponse);
+                                                  @Valid @RequestBody PhotosRequest request,
+                                                  @AuthenticationPrincipal Jwt jwt) {
+        return requireReportAuthorOrStaff(jwt, reportId)
+                .then(Mono.defer(() -> addReportPhotosUseCase.handle(reportId, request.photosUrls())))
+                .map(mapper::toResponse);
     }
 
     @PostMapping("/{reportId}/close")
@@ -128,5 +137,25 @@ public class SecurityReportController {
     @Operation(summary = "List the comments of a security report")
     public Flux<CommentResponse> findComments(@PathVariable UUID reportId) {
         return consultReportCommentsUseCase.handle(reportId).map(mapper::toResponse);
+    }
+
+    private static boolean isAdminOrManager(Jwt jwt) {
+        var role = jwt.getClaimAsString(JwtConfiguration.ROLE_CLAIM);
+        return UserRole.ADMIN.name().equals(role) || UserRole.DESTINATION_MANAGER.name().equals(role);
+    }
+
+    private Mono<Void> requireReportAuthorOrStaff(Jwt jwt, UUID reportId) {
+        if (isAdminOrManager(jwt)) {
+            return Mono.empty();
+        }
+        return consultOneReportUseCase.handle(reportId)
+                .doOnNext(report -> {
+                    var authorId = report.getUser() == null ? null : report.getUser().id();
+                    if (authorId == null || !authorId.toString().equals(jwt.getSubject())) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "Only the author of the report (or staff) can change it.");
+                    }
+                })
+                .then();
     }
 }

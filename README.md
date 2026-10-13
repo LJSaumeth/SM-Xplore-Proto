@@ -61,25 +61,29 @@ data is only included for authenticated callers).
 ### Security notes / known gaps
 
 - The chain enforces **roles**; **resource ownership** is enforced in the
-  controllers: `GET`/`PUT`/`DELETE /api/v1/users/{id}` and `GET /reservations/{id}`
-  are owner-or-staff, reservations can only be created/cancelled by their owner,
-  `confirm`/`reject`/`attendance`/`no-show` belong to the reservation's provider or
-  guide, activities belong to their guide, services to their provider, and the
-  reporter/commenter of a security report comes from the token (never the body).
+  controllers: `GET`/`PUT`/`DELETE /api/v1/users/{id}` are owner-or-admin;
+  reservations (including their items) are owner/provider/guide/staff scoped —
+  creation and cancellation belong to the owner, `confirm`/`reject`/`attendance`/
+  `no-show` to the reservation's provider or guide; activities belong to their
+  guide, services to their provider, report text/photos to the report's author
+  (staff can do everything), and the reporter/commenter always comes from the
+  token (never the body).
 - Public profiles (`GET /api/v1/users/guides/{id}`, `/users/providers/{id}`) only
   expose active (approved) accounts; email/phone are returned to authenticated
   callers only (anonymous requests get them as `null`).
 - Role changes are rejected (400): each role has its own profile data, so an
   account must be created with the role it needs (see the `approve-*` flows).
-- Registration **reject** flows are not exposed yet (the domain supports rejecting
-  provider registrations); blocked or suspended accounts can be reactivated by an
+- Provider registrations can be rejected by admins
+  (`POST /api/v1/users/{id}/reject-provider`); guide/destination-manager reject
+  flows are not exposed yet. Blocked or suspended accounts can be reactivated by an
   admin with `PATCH /api/v1/users/{id}/status` (`ACTIVE`). Pending (`INACTIVE`)
   accounts cannot be activated directly — they must go through the `approve-*`
   endpoints, and a provider can only log in once its registration is `APPROVED`.
-- New in this branch: **sites & zones** (zones in PostgreSQL, sites in MongoDB — public
-  reads, `DESTINATION_MANAGER`/`ADMIN` management), **catalog filters** by site/zone,
-  **event editing** (`PUT /events/{id}`), **reservations by provider/guide/item** plus a
-  readable code (`R-####`), and **solved reports** (`POST /security-reports/{id}/solve`).
+- **Sites & zones** (zones in PostgreSQL, sites in MongoDB — public reads,
+  `DESTINATION_MANAGER`/`ADMIN` management), **catalog filters** by site/zone,
+  **event editing** (`PUT /events/{id}`), **reservations by provider/guide/item**
+  plus a readable code (`R-####`), and **solved reports**
+  (`POST /security-reports/{id}/solve`).
 - No refresh tokens and no revocation: a token stays valid until `exp`
   (60 minutes by default, `JWT_EXPIRATION_MINUTES`); blocking a user does not
   invalidate tokens already issued.

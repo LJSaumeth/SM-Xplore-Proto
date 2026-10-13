@@ -142,8 +142,9 @@ public class ReservationController {
                                                 @RequestParam(defaultValue = "50") int limit,
                                                 @AuthenticationPrincipal Jwt jwt) {
         return requireItemAccess(jwt, itemType, itemId)
-                .thenMany(consultReservationsByItemUseCase.handle(itemId, itemType, PaginationLimits.clamp(limit))
-                        .map(mapper::toResponse));
+                .thenMany(Flux.defer(() -> consultReservationsByItemUseCase.handle(itemId, itemType,
+                        PaginationLimits.clamp(limit))))
+                .map(mapper::toResponse);
     }
 
     @PatchMapping("/{reservationId}/confirm")
@@ -280,7 +281,7 @@ public class ReservationController {
                             "You can only list reservations of your own activities.")))
                     .then();
             case EVENT -> Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Only administrators can list reservations of an event."));
+                    "Only administrators or destination managers can list reservations of an event."));
         };
     }
 }

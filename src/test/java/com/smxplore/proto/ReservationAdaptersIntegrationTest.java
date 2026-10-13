@@ -131,8 +131,9 @@ class ReservationAdaptersIntegrationTest {
     @Test
     void addingItemsRecalculatesTheReservationTotal() {
         var reservation = reservationRepository.save(reservation(new BigDecimal("0.00"))).block();
-        var firstActivity = activityRepository.save(activity(new BigDecimal("25000.00"))).block();
-        var secondActivity = activityRepository.save(activity(new BigDecimal("30000.00"))).block();
+        var guideId = UUID.randomUUID();
+        var firstActivity = activityRepository.save(activity(new BigDecimal("25000.00"), guideId)).block();
+        var secondActivity = activityRepository.save(activity(new BigDecimal("30000.00"), guideId)).block();
         var first = item(reservation.getId(), firstActivity.getId());
         var second = item(reservation.getId(), secondActivity.getId());
 
@@ -143,6 +144,8 @@ class ReservationAdaptersIntegrationTest {
         var updated = reservationRepository.findById(reservation.getId()).block();
         assertThat(updated).isNotNull();
         assertThat(updated.getTotal()).isEqualByComparingTo(new BigDecimal("55000.00"));
+        // regression: the guide resolved from the catalog must be persisted on the reservation
+        assertThat(updated.getGuideId()).isEqualTo(guideId);
         assertThat(reservationItemRepository.findByReservationId(reservation.getId()).collectList().block())
                 .hasSize(2);
     }
@@ -218,10 +221,15 @@ class ReservationAdaptersIntegrationTest {
     }
 
     private Activity activity(BigDecimal price) {
+        return activity(price, null);
+    }
+
+    private Activity activity(BigDecimal price, UUID guideId) {
         Instant startsAt = Instant.now().plusSeconds(3600).truncatedTo(ChronoUnit.MILLIS);
         return Activity.builder()
                 .id(UUID.randomUUID())
                 .siteId(UUID.randomUUID())
+                .guideId(guideId)
                 .name("City Walking Tour")
                 .category("Tour")
                 .price(price)

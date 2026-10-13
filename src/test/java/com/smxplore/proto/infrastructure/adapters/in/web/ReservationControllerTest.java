@@ -3,7 +3,12 @@ package com.smxplore.proto.infrastructure.adapters.in.web;
 import com.smxplore.proto.domain.exceptions.reservation.ReservationNotFoundException;
 import com.smxplore.proto.domain.model.reservation.PaymentMethod;
 import com.smxplore.proto.domain.model.reservation.Reservation;
+import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.model.reservation.ReservationStatus;
+import com.smxplore.proto.domain.model.service.Service;
+import com.smxplore.proto.domain.model.service.ServiceType;
+import com.smxplore.proto.domain.model.types.Location;
+import com.smxplore.proto.domain.model.types.ProviderRef;
 import com.smxplore.proto.domain.ports.repository.ActivityRepositoryPort;
 import com.smxplore.proto.domain.ports.repository.ServiceRepositoryPort;
 import com.smxplore.proto.domain.ports.usecases.reservation.CancelReservationUseCasePort;
@@ -30,6 +35,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -38,6 +44,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -221,6 +228,43 @@ class ReservationControllerTest {
                 .expectStatus().isForbidden();
 
         verify(confirmReservationUseCase, never()).handle(any());
+    }
+
+    @Test
+    void findByItemRejectsProvidersOfOtherServices() {
+        var serviceId = UUID.randomUUID();
+        var service = Service.builder()
+                .id(serviceId)
+                .name("Airport transport")
+                .type(ServiceType.TRANSPORT)
+                .provider(new ProviderRef(UUID.randomUUID(), "Ana"))
+                .location(new Location(4.65, -74.05))
+                .price(new BigDecimal("50000.00"))
+                .build();
+        given(serviceRepository.findById(serviceId)).willReturn(Mono.just(service));
+
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "SERVICE_PROVIDER")));
+
+        client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/reservations/by-item")
+                        .queryParam("itemType", "SERVICE")
+                        .queryParam("itemId", serviceId)
+                        .build())
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void findByItemIsAllowedForStaff() {
+        var itemId = UUID.randomUUID();
+        given(consultReservationsByItemUseCase.handle(any(), any(), anyInt())).willReturn(Flux.empty());
+
+        webTestClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/reservations/by-item")
+                        .queryParam("itemType", "SERVICE")
+                        .queryParam("itemId", itemId)
+                        .build())
+                .exchange()
+                .expectStatus().isOk();
     }
 
     private Reservation reservation(ReservationStatus status) {

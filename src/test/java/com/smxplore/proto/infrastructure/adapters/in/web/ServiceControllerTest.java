@@ -87,6 +87,30 @@ class ServiceControllerTest {
     }
 
     @Test
+    void changePriceRejectsWhenTheProviderIsNotTheOwner() {
+        var service = Service.builder()
+                .id(UUID.randomUUID())
+                .name("Airport transport")
+                .type(ServiceType.TRANSPORT)
+                .provider(new ProviderRef(UUID.randomUUID(), "Ana"))
+                .location(new Location(4.65, -74.05))
+                .price(new BigDecimal("50000.00"))
+                .build();
+        given(serviceRepository.findById(service.getId())).willReturn(Mono.just(service));
+
+        var client = webTestClient.mutateWith(SecurityMockServerConfigurers.mockJwt()
+                .jwt(jwt -> jwt.subject(UUID.randomUUID().toString()).claim("role", "SERVICE_PROVIDER")));
+
+        client.patch().uri("/api/v1/services/{serviceId}/price", service.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"price": 60000.00}
+                        """)
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
     void registerMapsRequestAndReturnsCreatedService() {
         var provider = new ProviderRef(UUID.randomUUID(), "Ana");
         var registered = Service.builder()

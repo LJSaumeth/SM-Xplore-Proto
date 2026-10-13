@@ -1,14 +1,17 @@
 package com.smxplore.proto;
 
 import com.smxplore.proto.domain.model.destinationmanager.DestinationManager;
+import com.smxplore.proto.domain.model.event.EventStatus;
 import com.smxplore.proto.domain.model.serviceprovider.RegistrationStatus;
 import com.smxplore.proto.domain.model.user.UserRole;
 import com.smxplore.proto.domain.model.user.UserStatus;
 import com.smxplore.proto.domain.ports.repository.UserRepositoryPort;
 import com.smxplore.proto.domain.ports.security.PasswordHasherPort;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.AuthResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.EventResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.GuideProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ReservationResponse;
+import com.smxplore.proto.infrastructure.adapters.in.web.dto.SecurityReportResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.ServiceProviderProfileResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.SiteResponse;
 import com.smxplore.proto.infrastructure.adapters.in.web.dto.UserResponse;
@@ -899,6 +902,113 @@ class SecurityIntegrationTest {
                 .headers(h -> h.setBearerAuth(otherTourist.token()))
                 .exchange()
                 .expectStatus().isForbidden();
+
+        // another tourist cannot add items to (or read the items of) someone else's reservation
+        webTestClient.post().uri("/api/v1/reservations/{reservationId}/items", reservationId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"itemId": "%s", "type": "EVENT", "price": 1000}
+                        """.formatted(UUID.randomUUID()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}/items", reservationId)
+                .headers(h -> h.setBearerAuth(otherTourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get().uri("/api/v1/reservations/{reservationId}/items", reservationId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void anonymousCatalogHidesUnpublishedEvents() {
+        var manager = destinationManagerToken();
+        var tourist = tourist();
+
+        var created = webTestClient.post().uri("/api/v1/events")
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(eventBody())
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(EventResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(created).isNotNull();
+        assertThat(created.status()).isEqualTo(EventStatus.DRAFT);
+        var eventId = created.id();
+
+        // anonymous callers cannot see it yet
+        webTestClient.get().uri("/api/v1/events/{eventId}", eventId)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // after publishing it becomes visible
+        webTestClient.patch().uri("/api/v1/events/{eventId}/status", eventId)
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"status": "PUBLISHED"}
+                        """)
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get().uri("/api/v1/events/{eventId}", eventId)
+                .exchange()
+                .expectStatus().isOk();
+
+        // only managers/admins can edit events
+        var updateBody = """
+                {"name": "Updated Event", "category": "Nautical", "price": 1200.00,
+                 "maxCapacity": 8, "startsAt": "2026-12-02T10:00:00Z", "endsAt": "2026-12-02T12:00:00Z"}
+                """;
+        webTestClient.put().uri("/api/v1/events/{eventId}", eventId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(updateBody)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.put().uri("/api/v1/events/{eventId}", eventId)
+                .headers(h -> h.setBearerAuth(manager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(updateBody)
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void reportSolveIsStaffOnlyAndReporterComesFromTheToken() {
+        var tourist = tourist();
+        var admin = login(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        var report = webTestClient.post().uri("/api/v1/security-reports")
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {"text": "Reporte de prueba"}
+                        """)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(SecurityReportResponse.class)
+                .returnResult()
+                .getResponseBody();
+        assertThat(report).isNotNull();
+        var reportId = report.id();
+
+        webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
+                .headers(h -> h.setBearerAuth(tourist.token()))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.post().uri("/api/v1/security-reports/{reportId}/solve", reportId)
+                .headers(h -> h.setBearerAuth(admin))
+                .exchange()
+                .expectStatus().isOk();
     }
 
     @Test

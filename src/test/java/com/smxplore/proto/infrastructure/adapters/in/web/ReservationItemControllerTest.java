@@ -7,6 +7,7 @@ import com.smxplore.proto.domain.model.reservation.ReservationItemType;
 import com.smxplore.proto.domain.ports.usecases.reservation.AddReservationItemUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.AddReservationItemsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationItemUseCasePort;
+import com.smxplore.proto.domain.ports.usecases.reservation.ConsultOneReservationUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationItemsByTypeUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.reservation.ConsultReservationItemsUseCasePort;
 import com.smxplore.proto.infrastructure.adapters.in.web.controller.ReservationItemController;
@@ -54,10 +55,14 @@ class ReservationItemControllerTest {
     @MockitoBean
     private ConsultReservationItemsByTypeUseCasePort consultReservationItemsByTypeUseCase;
 
+    @MockitoBean
+    private ConsultOneReservationUseCasePort consultOneReservationUseCase;
+
     @Autowired
     void configureClient(WebTestClient webTestClient) {
         this.webTestClient = webTestClient
-                .mutateWith(SecurityMockServerConfigurers.mockUser("tester"))
+                .mutateWith(SecurityMockServerConfigurers.mockJwt()
+                        .jwt(jwt -> jwt.subject("tester").claim("role", "ADMIN")))
                 .mutateWith(SecurityMockServerConfigurers.csrf());
     }
 

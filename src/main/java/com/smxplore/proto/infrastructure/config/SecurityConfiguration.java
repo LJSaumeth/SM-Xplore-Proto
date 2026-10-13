@@ -107,6 +107,12 @@ public class SecurityConfiguration {
                         .hasAnyRole(UserRole.TOURIST.name(), UserRole.ADMIN.name())
                         .pathMatchers(HttpMethod.GET, "/api/v1/reservations")
                         .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
+                        .pathMatchers(HttpMethod.HEAD, "/api/v1/reservations")
+                        .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
+                        .pathMatchers(HttpMethod.GET, "/api/v1/reservation-items")
+                        .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
+                        .pathMatchers(HttpMethod.HEAD, "/api/v1/reservation-items")
+                        .hasAnyRole(UserRole.ADMIN.name(), UserRole.DESTINATION_MANAGER.name())
                         .pathMatchers(HttpMethod.GET, "/api/v1/reservations/providers/*",
                                 "/api/v1/reservations/guides/*", "/api/v1/reservations/by-item")
                         .hasAnyRole(UserRole.SERVICE_PROVIDER.name(), UserRole.GUIDE.name(), UserRole.ADMIN.name(),

@@ -1,5 +1,7 @@
 package com.smxplore.proto.infrastructure.adapters.in.web.controller;
 
+import com.smxplore.proto.domain.exceptions.event.EventNotFoundException;
+import com.smxplore.proto.domain.model.event.EventStatus;
 import com.smxplore.proto.domain.ports.usecases.event.ChangeEventStatusUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.ConsultEventsUseCasePort;
 import com.smxplore.proto.domain.ports.usecases.event.EstimateEventAttendanceUseCasePort;
@@ -20,6 +22,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -61,21 +65,24 @@ public class EventController {
     }
 
     @GetMapping("/{eventId}")
-    @Operation(summary = "Get one event by id")
-    public Mono<EventResponse> findOne(@PathVariable UUID eventId) {
-        return viewEventDetailsUseCase.handle(eventId).map(mapper::toResponse);
+    @Operation(summary = "Get one event by id (unpublished events are hidden from anonymous callers)")
+    public Mono<EventResponse> findOne(@PathVariable UUID eventId, @AuthenticationPrincipal Jwt jwt) {
+        return viewEventDetailsUseCase.handle(eventId)
+                .map(mapper::toResponse)
+                .filter(response -> jwt != null || isPublished(response))
+                .switchIfEmpty(Mono.error(new EventNotFoundException(eventId)));
     }
 
     @GetMapping
-    @Operation(summary = "List all events")
-    public Flux<EventResponse> findAll() {
-        return consultEventsUseCase.handle().map(mapper::toResponse);
+    @Operation(summary = "List all events (anonymous callers only see published ones)")
+    public Flux<EventResponse> findAll(@AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, consultEventsUseCase.handle().map(mapper::toResponse));
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search events by name")
-    public Flux<EventResponse> search(@RequestParam String name) {
-        return searchEventsUseCase.handle(name).map(mapper::toResponse);
+    @Operation(summary = "Search events by name (anonymous callers only see published ones)")
+    public Flux<EventResponse> search(@RequestParam String name, @AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, searchEventsUseCase.handle(name).map(mapper::toResponse));
     }
 
     @PatchMapping("/{eventId}/status")
@@ -94,15 +101,15 @@ public class EventController {
     }
 
     @GetMapping("/site/{siteId}")
-    @Operation(summary = "List the events of a site")
-    public Flux<EventResponse> findBySite(@PathVariable UUID siteId) {
-        return findEventsBySiteUseCase.handle(siteId).map(mapper::toResponse);
+    @Operation(summary = "List the events of a site (anonymous callers only see published ones)")
+    public Flux<EventResponse> findBySite(@PathVariable UUID siteId, @AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, findEventsBySiteUseCase.handle(siteId).map(mapper::toResponse));
     }
 
     @GetMapping("/zone/{zoneId}")
-    @Operation(summary = "List the events of the sites of a zone")
-    public Flux<EventResponse> findByZone(@PathVariable UUID zoneId) {
-        return findEventsByZoneUseCase.handle(zoneId).map(mapper::toResponse);
+    @Operation(summary = "List the events of the sites of a zone (anonymous callers only see published ones)")
+    public Flux<EventResponse> findByZone(@PathVariable UUID zoneId, @AuthenticationPrincipal Jwt jwt) {
+        return visibleTo(jwt, findEventsByZoneUseCase.handle(zoneId).map(mapper::toResponse));
     }
 
     @PutMapping("/{eventId}")
@@ -112,5 +119,13 @@ public class EventController {
         return updateEventUseCase.handle(eventId, request.name(), request.category(), request.price(),
                         request.maxCapacity(), request.startsAt(), request.endsAt(), request.description())
                 .map(mapper::toResponse);
+    }
+
+    private static Flux<EventResponse> visibleTo(Jwt jwt, Flux<EventResponse> events) {
+        return jwt == null ? events.filter(EventController::isPublished) : events;
+    }
+
+    private static boolean isPublished(EventResponse response) {
+        return response.status() == EventStatus.PUBLISHED;
     }
 }

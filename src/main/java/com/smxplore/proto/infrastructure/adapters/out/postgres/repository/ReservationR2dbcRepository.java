@@ -24,7 +24,7 @@ public interface ReservationR2dbcRepository extends ReactiveCrudRepository<Reser
 
     Flux<ReservationEntity> findAllByGuideIdAndStatus(UUID guideId, ReservationStatus status, Pageable pageable);
 
-    @Query("SELECT r.* FROM reservations r JOIN reservation_items i ON i.reservation_id = r.id "
+    @Query("SELECT DISTINCT r.* FROM reservations r JOIN reservation_items i ON i.reservation_id = r.id "
             + "WHERE i.item_id = :itemId AND i.type = :type ORDER BY r.id LIMIT :limit")
     Flux<ReservationEntity> findAllByItem(UUID itemId, String type, int limit);
 
